@@ -87,7 +87,7 @@ function handleNav(view) {
     document.getElementById('daily-view').style.display = view === 'daily' ? 'flex' : 'none';
     document.getElementById('monthly-view').style.display = view === 'monthly' ? 'block' : 'none';
     
-    if (view === 'monthly') renderMonthlyCalendar(); // 改呼叫新的月曆函數
+    if (view === 'monthly') renderMonthlyCalendar(); 
     toggleMenu(false); 
 }
 
@@ -181,7 +181,7 @@ function updateStats() {
     pieChart = new Chart(ctx, {
         type: 'doughnut',
         data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 2, borderColor: '#f2f5f6' }] },
-        options: { cutout: '75%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { let label = context.label || ''; let value = context.raw || 0; let percentage = Math.round((value / grandTotal) * 100) + '%'; return label ? label + ': ' + percentage : percentage; } } } } }
+        options: { cutout: '75%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { let label = context.label || ''; let value = context.raw || 0; let percentage = grandTotal > 0 ? Math.round((value / grandTotal) * 100) + '%' : '0%'; return label ? label + ': ' + percentage : percentage; } } } } }
     });
 
     const typeLabel = currentType === 'expense' ? '總支出' : '總收入';
@@ -246,12 +246,11 @@ function switchTab(tab, btnElement) {
     document.getElementById('list-container-wrapper').style.display = tab === 'list' ? 'flex' : 'none';
 }
 
-// 🌟 全新魔法：生成月曆式排列
+// 🌟 升級版魔法：月曆生成 (加入收支餘額統整、星期日為首)
 function renderMonthlyCalendar() {
     const container = document.getElementById('monthly-content');
     container.innerHTML = '';
     
-    // 整理資料：Year -> Month -> Day (只記錄有花費的日期)
     const dataTree = {};
     
     expenses.forEach(ex => {
@@ -265,7 +264,8 @@ function renderMonthlyCalendar() {
         }
 
         if(!dataTree[y]) dataTree[y] = {};
-        if(!dataTree[y][m]) dataTree[y][m] = { totalExp: 0, days: {} };
+        // 🌟 新增 totalInc 收入加總
+        if(!dataTree[y][m]) dataTree[y][m] = { totalExp: 0, totalInc: 0, days: {} };
         if(!dataTree[y][m].days[day]) dataTree[y][m].days[day] = { totalExp: 0, records: [] };
         
         dataTree[y][m].days[day].records.push(ex);
@@ -273,6 +273,9 @@ function renderMonthlyCalendar() {
         if (ex.type === 'expense') {
             dataTree[y][m].totalExp += ex.amount;
             dataTree[y][m].days[day].totalExp += ex.amount;
+        } else if (ex.type === 'income') {
+            dataTree[y][m].totalInc += ex.amount;
+            // 收入不計入 days[day].totalExp，因此月曆格子上不會顯示
         }
     });
 
@@ -281,59 +284,60 @@ function renderMonthlyCalendar() {
         return;
     }
 
-    // 由近到遠排序年份
     Object.keys(dataTree).sort((a,b)=>b-a).forEach(y => {
-        // 渲染純文字無框年份
         const yTitle = document.createElement('div');
         yTitle.className = 'calendar-year-title';
         yTitle.innerText = `${y}年`;
         container.appendChild(yTitle);
 
-        // 該年由近到遠排序月份
         Object.keys(dataTree[y]).sort((a,b)=>b-a).forEach(m => {
             const mData = dataTree[y][m];
             
-            // 建立月份白底卡片
             const mCard = document.createElement('div');
             mCard.className = 'calendar-month-card';
 
-            // 卡片頭部：左邊月份，右邊總花費
             const mHeader = document.createElement('div');
             mHeader.className = 'calendar-month-header';
-            mHeader.innerHTML = `<span class="month-name">${parseInt(m)}月</span><span class="month-total">月花費: $${mData.totalExp}</span>`;
+            
+            const balance = mData.totalInc - mData.totalExp;
+            
+            // 🌟 儀表板：左邊月份，右邊 收入/支出/餘額
+            mHeader.innerHTML = `
+                <div class="month-name">${parseInt(m)}月</div>
+                <div class="month-stats">
+                    <div style="color: var(--income-color);">月收入: $${mData.totalInc}</div>
+                    <div style="color: var(--danger);">月支出: $${mData.totalExp}</div>
+                    <div style="color: var(--text-color); font-size: 14px;">餘額: $${balance}</div>
+                </div>
+            `;
             mCard.appendChild(mHeader);
 
-            // 星期標題列 (一到日)
             const weekHeader = document.createElement('div');
             weekHeader.className = 'calendar-grid week-header';
-            ['一','二','三','四','五','六','日'].forEach(w => {
+            // 🌟 改成星期日為一週之首
+            ['日','一','二','三','四','五','六'].forEach(w => {
                 const wSpan = document.createElement('span');
                 wSpan.innerText = w;
                 weekHeader.appendChild(wSpan);
             });
             mCard.appendChild(weekHeader);
 
-            // 日期方塊區
             const daysGrid = document.createElement('div');
             daysGrid.className = 'calendar-grid days-grid';
 
-            // 計算該月第一天是星期幾 (0是週日，1是週一... 但我們要讓週一排在前面)
+            // 取得該月第一天是星期幾 (0 是週日，6 是週六)
             const firstDayObj = new Date(y, parseInt(m)-1, 1);
-            let firstDayIndex = firstDayObj.getDay(); 
-            // 轉換為 1(週一) ~ 7(週日)
-            firstDayIndex = firstDayIndex === 0 ? 7 : firstDayIndex;
+            const firstDayIndex = firstDayObj.getDay(); 
             
-            // 填入空白的佔位方塊
-            for(let i = 1; i < firstDayIndex; i++) {
+            // 補齊前面的空白格子
+            for(let i = 0; i < firstDayIndex; i++) {
                 const emptyCell = document.createElement('div');
                 emptyCell.className = 'calendar-day empty';
                 daysGrid.appendChild(emptyCell);
             }
 
-            // 計算該月總天數
             const daysInMonth = new Date(y, parseInt(m), 0).getDate();
 
-            // 填入真正的日期方塊
             for(let d = 1; d <= daysInMonth; d++) {
                 const dayStr = String(d).padStart(2, '0');
                 const cell = document.createElement('div');
@@ -342,16 +346,21 @@ function renderMonthlyCalendar() {
                 const dData = mData.days[dayStr];
                 
                 if(dData) {
-                    // 如果這天有紀錄
                     cell.classList.add('has-record');
+                    
+                    // 🌟 只有當天有花費時，才顯示紅色的數字，且拿掉 -$ 符號
+                    let amtHtml = '';
+                    if (dData.totalExp > 0) {
+                        amtHtml = `<div class="date-amt">${dData.totalExp}</div>`;
+                    }
+                    
                     cell.innerHTML = `
                         <div class="date-num">${d}</div>
-                        <div class="date-amt">-$${dData.totalExp}</div>
+                        ${amtHtml}
                     `;
                     const dateKey = `${y}-${m}-${dayStr}`;
                     cell.onclick = () => openDayDetail(dateKey, dData.records);
                 } else {
-                    // 如果這天沒紀錄
                     cell.innerHTML = `<div class="date-num">${d}</div>`;
                 }
                 
