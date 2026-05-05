@@ -10,37 +10,63 @@
 <body>
     <div id="loading-screen"><div class="loader">Yong-Zhu</div></div>
 
-    <div class="header"><span>看看你花了多少!</span></div>
+    <div class="header">
+        <div class="header-spacer"></div> <span>看看你花了多少!</span>
+        <div class="menu-icon" onclick="toggleMenu(true)">
+            <div></div><div></div><div></div>
+        </div>
+    </div>
+
+    <div id="menu-overlay" onclick="toggleMenu(false)"></div>
+    <div id="nav-drawer">
+        <div class="drawer-header">
+            <span class="close-btn" onclick="toggleMenu(false)">✕</span>
+        </div>
+        <div class="drawer-content">
+            <div class="nav-item active" onclick="handleNav('daily')">日支出/記帳</div>
+            <div class="nav-item" onclick="handleNav('monthly')">月紀錄明細</div>
+        </div>
+    </div>
 
     <div id="main-container">
-        <!-- 上半部：統計區 (固定比例) -->
-        <div id="stats-section">
-            <div class="toggle-group main-toggle">
-                <button class="toggle-btn active" onclick="switchTab('chart')">圓餅圖</button>
-                <button class="toggle-btn" onclick="switchTab('list')">條列檢視</button>
-            </div>  
-            <div id="display-area">
-                <div id="chart-container"><canvas id="expenseChart"></canvas></div>
-                <div id="list-container"></div>
+        <div id="daily-view">
+            <div id="stats-section">
+                <div class="toggle-group main-toggle">
+                    <button class="toggle-btn active" onclick="switchTab('chart', this)">圓餅圖</button>
+                    <button class="toggle-btn" onclick="switchTab('list', this)">條列檢視</button>
+                </div>  
+                <div id="display-area">
+                    <div id="chart-container">
+                        <canvas id="expenseChart"></canvas>
+                        <div id="chart-center-text"></div>
+                    </div>
+                    <div id="list-container-wrapper">
+                        <div id="list-total"></div>
+                        <div id="list-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="input-section">
+                <div class="type-toggle-group">
+                    <button id="type-exp" class="type-btn active" onclick="setRecordType('expense')">支出</button>
+                    <button id="type-inc" class="type-btn" onclick="setRecordType('income')">收入</button>
+                </div>
+
+                <div class="section-title">選擇分類</div>
+                <div id="category-grid" class="category-grid"></div>
+                
+                <div class="input-group">
+                    <input type="number" id="amount-input" placeholder="金額" inputmode="decimal">
+                    <input type="text" id="memo-input" placeholder="備註 (選填)">
+                </div>
+                
+                <button id="add-btn" onclick="addRecord()">確認紀錄</button>
             </div>
         </div>
 
-        <!-- 下半部：輸入區 (自動滾動，保證不超出畫面) -->
-        <div id="input-section">
-            <div class="type-toggle-group">
-                <button id="type-exp" class="type-btn active" onclick="setRecordType('expense')">支出</button>
-                <button id="type-inc" class="type-btn" onclick="setRecordType('income')">收入</button>
-            </div>
-
-            <div class="section-title">選擇分類</div>
-            <div id="category-grid" class="category-grid"></div>
-            
-            <div class="input-group">
-                <input type="number" id="amount-input" placeholder="金額" inputmode="decimal">
-                <input type="text" id="memo-input" placeholder="備註 (選填)">
-            </div>
-            
-            <button id="add-btn" onclick="addRecord()">確認紀錄</button>
+        <div id="monthly-view">
+            <div id="monthly-content"></div>
         </div>
     </div>
     <script src="script.js"></script>

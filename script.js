@@ -1,7 +1,6 @@
 const EXP_CATS = ["貓咪用品", "賣場/Costco", "餐飲", "交通", "生活/帳單", "購物/治裝", "娛樂/聚餐", "醫療/健康", "理財/投資", "數位/軟體", "嗜好/裝備"];
 const INC_CATS = ["薪資", "獎金", "中獎", "投資收入", "其他收入"];
 
-// 專屬莫蘭迪色票 (藍綠灰粉為主)
 const CAT_COLORS = {
     "貓咪用品": "#d6a278", "賣場/Costco": "#c48888", "餐飲": "#8dae99", "交通": "#8b9ba3",
     "生活/帳單": "#86a5b8", "購物/治裝": "#9b8dae", "娛樂/聚餐": "#d4a9b4", "醫療/健康": "#8bb0b3",
@@ -10,7 +9,7 @@ const CAT_COLORS = {
 };
 
 let expenses = JSON.parse(localStorage.getItem('my_expenses')) || [];
-let currentType = 'expense';
+let currentType = 'expense'; 
 let selectedCategory = "";
 let pieChart = null;
 
@@ -23,12 +22,40 @@ window.onload = () => {
     }, 800);
 };
 
+// 漢堡選單開關
+function toggleMenu(open) {
+    const drawer = document.getElementById('nav-drawer');
+    const overlay = document.getElementById('menu-overlay');
+    if (open) {
+        drawer.classList.add('open');
+        overlay.classList.add('show');
+    } else {
+        drawer.classList.remove('open');
+        overlay.classList.remove('show');
+    }
+}
+
+// 處理選單點擊
+function handleNav(view) {
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.toggle('active', item.innerText.includes(view === 'daily' ? '日' : '月'));
+    });
+    
+    document.getElementById('daily-view').style.display = view === 'daily' ? 'flex' : 'none';
+    document.getElementById('monthly-view').style.display = view === 'monthly' ? 'block' : 'none';
+    
+    if (view === 'monthly') renderMonthlyView();
+    toggleMenu(false); // 點擊後自動關閉選單
+}
+
+// 修改：輸入類型切換時，統計類型同步跟進
 function setRecordType(type) {
     currentType = type;
     selectedCategory = "";
     document.getElementById('type-exp').classList.toggle('active', type === 'expense');
     document.getElementById('type-inc').classList.toggle('active', type === 'income');
     renderCategoryGrid();
+    updateStats(); // 同步更新上方的統計圖表
 }
 
 function renderCategoryGrid() {
@@ -42,7 +69,6 @@ function renderCategoryGrid() {
         btn.innerText = cat;
         
         btn.onclick = () => {
-            // 先重置所有按鈕的樣式
             document.querySelectorAll('.cat-btn').forEach(b => {
                 b.classList.remove('selected');
                 b.style.backgroundColor = '#f8fafa';
@@ -51,14 +77,12 @@ function renderCategoryGrid() {
                 b.style.boxShadow = 'none';
             });
             
-            // 為點擊的按鈕染上對應的圓餅圖顏色！
             btn.classList.add('selected');
             const targetColor = CAT_COLORS[cat] || 'var(--primary)';
             btn.style.backgroundColor = targetColor;
             btn.style.borderColor = targetColor;
             btn.style.color = '#ffffff';
-            btn.style.boxShadow = `0 4px 10px ${targetColor}40`; // 加上淡淡的同色系陰影
-            
+            btn.style.boxShadow = `0 4px 10px ${targetColor}40`;
             selectedCategory = cat;
         };
         grid.appendChild(btn);
@@ -77,16 +101,21 @@ function addRecord() {
     localStorage.setItem('my_expenses', JSON.stringify(expenses));
     document.getElementById('amount-input').value = "";
     document.getElementById('memo-input').value = "";
-    
-    // 記帳後清除分類選取狀態
     selectedCategory = "";
     renderCategoryGrid();
     updateStats(); 
 }
 
 function updateStats() {
+    // 統計類型現在直接跟隨 currentType
+    const filteredExpenses = expenses.filter(e => e.type === currentType);
     const totals = {};
-    expenses.forEach(ex => { totals[ex.category] = (totals[ex.category] || 0) + ex.amount; });
+    let grandTotal = 0;
+    
+    filteredExpenses.forEach(ex => { 
+        totals[ex.category] = (totals[ex.category] || 0) + ex.amount; 
+        grandTotal += ex.amount;
+    });
 
     const labels = Object.keys(totals).filter(k => totals[k] > 0);
     const data = labels.map(k => totals[k]);
@@ -97,12 +126,17 @@ function updateStats() {
     pieChart = new Chart(ctx, {
         type: 'doughnut',
         data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 2, borderColor: '#f2f5f6' }] },
-        options: { cutout: '70%', plugins: { legend: { display: false } } }
+        options: { cutout: '75%', plugins: { legend: { display: false } } }
     });
+
+    const typeLabel = currentType === 'expense' ? '總支出' : '總收入';
+    const totalText = `<span style="font-size:12px; color:#8fa3ad; margin-bottom:2px;">${typeLabel}</span><span style="font-size:22px; font-weight:bold; color:var(--text-color);">$${grandTotal}</span>`;
+    document.getElementById('chart-center-text').innerHTML = totalText;
+    document.getElementById('list-total').innerText = `${typeLabel}: $${grandTotal}`;
 
     const container = document.getElementById('list-container');
     container.innerHTML = "";
-    [...expenses].reverse().forEach(ex => {
+    [...filteredExpenses].reverse().forEach(ex => {
         const wrapper = document.createElement('div');
         wrapper.className = 'list-item-wrapper';
         
@@ -133,14 +167,26 @@ function updateStats() {
         `;
         
         let startX = 0;
-        item.ontouchstart = (e) => startX = e.touches[0].clientX;
+        item.ontouchstart = (e) => {
+            document.querySelectorAll('.list-item.swiped').forEach(el => { if(el !== item) el.classList.remove('swiped'); });
+            startX = e.touches[0].clientX;
+        };
         item.ontouchmove = (e) => {
             let diff = startX - e.touches[0].clientX;
             if (diff > 50) item.classList.add('swiped');
             if (diff < -50) item.classList.remove('swiped');
         };
-        item.onmousedown = (e) => startX = e.clientX;
-        item.onmousemove = (e) => { if(e.buttons === 1) { let d = startX - e.clientX; if (d > 50) item.classList.add('swiped'); if (d < -50) item.classList.remove('swiped'); } };
+        item.onmousedown = (e) => {
+            document.querySelectorAll('.list-item.swiped').forEach(el => { if(el !== item) el.classList.remove('swiped'); });
+            startX = e.clientX;
+        };
+        item.onmousemove = (e) => { 
+            if(e.buttons === 1) { 
+                let d = startX - e.clientX; 
+                if (d > 50) item.classList.add('swiped'); 
+                if (d < -50) item.classList.remove('swiped'); 
+            } 
+        };
 
         wrapper.appendChild(delBtn);
         wrapper.appendChild(item);
@@ -148,9 +194,53 @@ function updateStats() {
     });
 }
 
-function switchTab(tab) {
+function switchTab(tab, btnElement) {
     document.querySelectorAll('.main-toggle .toggle-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
+    if (btnElement) btnElement.classList.add('active');
     document.getElementById('chart-container').style.display = tab === 'chart' ? 'block' : 'none';
-    document.getElementById('list-container').style.display = tab === 'list' ? 'flex' : 'none';
+    document.getElementById('list-container-wrapper').style.display = tab === 'list' ? 'flex' : 'none';
+}
+
+function renderMonthlyView() {
+    const container = document.getElementById('monthly-content');
+    container.innerHTML = '';
+    const tree = {};
+    expenses.forEach(ex => {
+        const d = new Date(ex.id);
+        const y = d.getFullYear(); const m = d.getMonth() + 1; const day = d.getDate();
+        if(!tree[y]) tree[y] = {};
+        if(!tree[y][m]) tree[y][m] = {};
+        if(!tree[y][m][day]) tree[y][m][day] = [];
+        tree[y][m][day].push(ex);
+    });
+
+    Object.keys(tree).sort((a,b)=>b-a).forEach(y => {
+        const yDiv = document.createElement('div'); yDiv.className = 'history-year'; yDiv.innerText = `${y}年`;
+        container.appendChild(yDiv);
+        Object.keys(tree[y]).map(Number).sort((a,b)=>b-a).forEach(m => {
+            const mWrapper = document.createElement('div'); mWrapper.className = 'history-month-wrapper';
+            const mHeader = document.createElement('div'); mHeader.className = 'history-month-header'; mHeader.innerText = `${m}月份`;
+            const daysContainer = document.createElement('div'); daysContainer.className = 'history-days-container'; daysContainer.style.display = 'none';
+            mHeader.onclick = () => {
+                const isHidden = daysContainer.style.display === 'none';
+                daysContainer.style.display = isHidden ? 'block' : 'none';
+            };
+            Object.keys(tree[y][m]).map(Number).sort((a,b)=>b-a).forEach(d => {
+                const dWrapper = document.createElement('div'); dWrapper.className = 'history-day-wrapper';
+                const dHeader = document.createElement('div'); dHeader.className = 'history-day-header'; dHeader.innerText = `${m}月${d}日`;
+                const recordsContainer = document.createElement('div'); recordsContainer.className = 'history-records-container'; recordsContainer.style.display = 'none';
+                dHeader.onclick = () => { recordsContainer.style.display = recordsContainer.style.display === 'none' ? 'block' : 'none'; };
+                tree[y][m][d].forEach(ex => {
+                    const rDiv = document.createElement('div'); rDiv.className = 'history-record';
+                    const color = CAT_COLORS[ex.category] || "#ccc";
+                    const displayAmt = ex.type === 'income' ? `+${ex.amount}` : `$${ex.amount}`;
+                    const amtColor = ex.type === 'income' ? 'var(--income-color)' : 'var(--text-color)';
+                    rDiv.innerHTML = `<div class="color-indicator" style="background:${color}; width:10px; height:10px; border-radius:50%;"></div><span style="flex:1; font-size:13px;">${ex.category}</span><span style="color:${amtColor}; font-weight:bold;">${displayAmt}</span>`;
+                    recordsContainer.appendChild(rDiv);
+                });
+                dWrapper.appendChild(dHeader); dWrapper.appendChild(recordsContainer); daysContainer.appendChild(dWrapper);
+            });
+            mWrapper.appendChild(mHeader); mWrapper.appendChild(daysContainer); container.appendChild(mWrapper);
+        });
+    });
 }
