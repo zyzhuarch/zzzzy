@@ -3,41 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>極簡選單記帳</title>
+    <title>極簡記帳 App</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="style.css">    
 </head>
 <body>
-
-    <!-- 1. 載入畫面 -->
     <div id="loading-screen">
         <div class="loader">Yong-Zhu</div>
-        <div style="font-size: 12px; margin-top: 8px; color: #aaa;">載入專屬空間...</div>
     </div>
 
-    <!-- 2. 主記帳畫面 (選單模式) -->
+    <!-- 主記帳頁面 -->
     <div id="screen-main" class="screen active">
         <div class="header">
             <span>極簡記帳</span>
             <button class="icon-btn" onclick="switchScreen('screen-stats')">📊</button>
         </div>
-        
         <div id="input-container">
             <div class="section-title">選擇分類</div>
-            <div id="category-grid" class="category-grid">
-                <!-- 分類按鈕會由 JS 動態產生 -->
-            </div>
-
+            <div id="category-grid" class="category-grid"></div>
             <div class="input-group">
                 <input type="number" id="amount-input" placeholder="輸入金額" inputmode="decimal">
                 <input type="text" id="memo-input" placeholder="備註 (選填)">
             </div>
-            
             <button id="add-btn" onclick="addExpense()">確認紀錄</button>
         </div>
     </div>  
 
-    <!-- 3. 統計與條列畫面 -->
+    <!-- 統計與清單頁面 -->
     <div id="screen-stats" class="screen">
         <div class="header">
             <button class="icon-btn" onclick="switchScreen('screen-main')">❮</button>
@@ -49,15 +41,10 @@
                 <button class="toggle-btn active" onclick="switchTab('chart')">圓餅圖</button>
                 <button class="toggle-btn" onclick="switchTab('list')">條列檢視</button>
             </div>  
-            <div id="chart-container">
-                <canvas id="expenseChart"></canvas>
-            </div>
-            <div id="list-container">
-                <!-- 紀錄會顯示在這裡 -->
-            </div>
+            <div id="chart-container"><canvas id="expenseChart"></canvas></div>
+            <div id="list-container"></div>
         </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
