@@ -2,50 +2,71 @@
   --bg-color: #F7F7F7;
   --text-color: #333333;
   --primary: #2C2C2C;
-  --white: #FFFFFF;
+  --danger: #FF3B30;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
 body { background-color: var(--bg-color); color: var(--text-color); height: 100dvh; overflow: hidden; }
 
-/* 載入畫面 */
-#loading-screen {
-  position: absolute; width: 100%; height: 100%; background: var(--primary);
-  color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s;
-}
-.loader { font-size: 24px; font-weight: bold; letter-spacing: 2px; }
-
-/* 介面配置 */
 .screen { width: 100%; height: 100dvh; display: none; flex-direction: column; }
 .screen.active { display: flex; }
-.header { height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; background: white; font-weight: bold; box-shadow: 0 1px 5px rgba(0,0,0,0.05); }
-.icon-btn { cursor: pointer; font-size: 20px; border: none; background: none; }
 
-/* 分類選單 */
-#input-container { padding: 20px; flex: 1; overflow-y: auto; }
-.section-title { font-size: 14px; color: #888; margin-bottom: 15px; }
+/* 分類網格與輸入 */
+.header { height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; background: white; font-weight: bold; }
+#input-container { padding: 20px; flex: 1; }
 .category-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-.cat-btn { background: white; border: 1px solid #EEE; padding: 12px 5px; border-radius: 12px; text-align: center; font-size: 13px; cursor: pointer; transition: 0.2s; }
-.cat-btn.selected { background: var(--primary); color: white; border-color: var(--primary); }
-
+.cat-btn { background: white; border: 1px solid #EEE; padding: 12px 5px; border-radius: 12px; text-align: center; cursor: pointer; }
+.cat-btn.selected { background: var(--primary); color: white; }
 .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-input { padding: 15px; border-radius: 12px; border: 1px solid #EEE; outline: none; font-size: 16px; }
-#add-btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; width: 100%; }
+input { padding: 15px; border-radius: 12px; border: 1px solid #EEE; font-size: 16px; }
+#add-btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; width: 100%; }
 
-/* 統計頁面與滑動刪除 */
-#stats-content { padding: 20px; flex: 1; overflow-y: auto; }
+/* 滑動刪除設計 */
+.list-item-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  background-color: var(--danger); /* 紅色底層 */
+  height: 70px;
+}
+
+.delete-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 80px;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 1; /* 在白色內容下方 */
+}
+
+.list-item {
+  background: white;
+  height: 100%;
+  padding: 0 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 2; /* 擋住紅色背景 */
+  transition: transform 0.3s ease;
+  cursor: grab;
+}
+
+.list-item.swiped {
+  transform: translateX(-80px); /* 往左滑開 */
+}
+
+/* 其他統計樣式 (省略部分與先前相同) */
 .toggle-group { display: flex; background: #E0E0E0; border-radius: 8px; padding: 4px; margin-bottom: 20px; }
-.toggle-btn { flex: 1; padding: 8px 0; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-weight: bold; color: #666; }
+.toggle-btn { flex: 1; padding: 8px 0; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-weight: bold; }
 .toggle-btn.active { background: white; color: var(--primary); }
-
 #chart-container { max-width: 300px; margin: 0 auto; }
-#list-container { display: none; flex-direction: column; gap: 10px; margin-top: 20px; }
-
-.list-item-wrapper { position: relative; overflow: hidden; border-radius: 12px; background: #FF3B30; }
-.list-item { background: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2; transition: transform 0.3s ease; }
-.list-item.swiped { transform: translateX(-70px); }
-.delete-label { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: white; font-weight: bold; z-index: 1; }
-
-.list-cat { font-weight: bold; font-size: 14px; }
-.list-memo { font-size: 12px; color: #999; }
-.list-amt { font-weight: bold; color: var(--primary); }
+#list-container { display: none; flex-direction: column; padding: 10px 0; }
+#loading-screen { position: absolute; width: 100%; height: 100%; background: var(--primary); color: white; display: flex; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s; }
