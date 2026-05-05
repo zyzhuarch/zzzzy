@@ -15,8 +15,8 @@ let expenses = [];
 let currentType = 'expense'; 
 let selectedCategory = "";
 let pieChart = null;
+let detailPieChart = null; // 單日明細的專屬圓餅圖
 
-// 取得台灣當地今天的日期 YYYY-MM-DD
 function getLocalToday() {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -33,9 +33,7 @@ window.onload = async () => {
         const response = await fetch(API_URL);
         const data = await response.json();
         if (data && data.length > 0) {
-            // 🌟 將雲端傳來的日期強制當作「純字串」處理
             expenses = data.map(record => {
-                // 如果雲端偷偷幫我們加了 T 或是 Z (代表它轉成時間物件了)，我們只取前面的日期部分
                 if (record.date && record.date.includes('T')) {
                     record.date = record.date.split('T')[0].replace(/-/g, '/');
                 }
@@ -139,8 +137,6 @@ async function addRecord() {
     
     if (!selectedCategory || !amt || !dateVal) return alert("大大，請選擇分類、日期並輸入金額喔！");
 
-    // 🌟 在日期字串前面加上一個單引號（'），這會告訴 Google 試算表：「這是一串純文字，請不要把它當作日期轉換時區！」
-    // 雖然雲端會存入單引號，但在網頁上我們只會取用它後面的值。
     const formattedDate = "'" + dateVal.replace(/-/g, '/');
 
     const newRecord = { 
@@ -149,7 +145,6 @@ async function addRecord() {
         category: selectedCategory, 
         amount: parseInt(amt), 
         memo: memo, 
-        // 傳送純文字日期
         date: formattedDate 
     };
 
@@ -191,7 +186,6 @@ function updateStats() {
     const ctx = document.getElementById('expenseChart').getContext('2d');
     if (pieChart) pieChart.destroy();
     
-    // 🌟 圓餅圖提示：將原本的花費數字改成百分比顯示
     pieChart = new Chart(ctx, {
         type: 'doughnut',
         data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 2, borderColor: '#f2f5f6' }] },
@@ -204,12 +198,8 @@ function updateStats() {
                         label: function(context) {
                             let label = context.label || '';
                             let value = context.raw || 0;
-                            // 計算這塊餅佔總金額的百分比
                             let percentage = Math.round((value / grandTotal) * 100) + '%';
-                            if (label) {
-                                label += ': ';
-                            }
-                            // 回傳 分類: XX%
+                            if (label) label += ': ';
                             return label + percentage;
                         }
                     }
@@ -260,11 +250,8 @@ function updateStats() {
         const displayAmt = ex.type === 'income' ? `+${ex.amount}` : `$${ex.amount}`;
         const amtColor = ex.type === 'income' ? 'var(--income-color)' : 'var(--text-color)';
 
-        // 清理顯示的日期：如果是字串，把開頭的防護用單引號拿掉
         let cleanDate = ex.date;
-        if(typeof cleanDate === 'string' && cleanDate.startsWith("'")) {
-             cleanDate = cleanDate.substring(1);
-        }
+        if(typeof cleanDate === 'string' && cleanDate.startsWith("'")) cleanDate = cleanDate.substring(1);
 
         item.innerHTML = `
             <div class="color-indicator" style="background:${color}"></div>
@@ -310,64 +297,162 @@ function switchTab(tab, btnElement) {
     document.getElementById('list-container-wrapper').style.display = tab === 'list' ? 'flex' : 'none';
 }
 
+// 🌟 全新改寫的月紀錄視圖邏輯
 function renderMonthlyView() {
     const container = document.getElementById('monthly-content');
     container.innerHTML = '';
+    
+    // 將資料依照 "YYYY年 MM月份" 和 "YYYY/MM/DD" 群組
     const tree = {};
+    
     expenses.forEach(ex => {
-        let y, m, day;
-        
-        // 🌟 清理單引號
         let cleanDate = ex.date;
-        if(typeof cleanDate === 'string' && cleanDate.startsWith("'")) {
-             cleanDate = cleanDate.substring(1);
-        }
+        if(typeof cleanDate === 'string' && cleanDate.startsWith("'")) cleanDate = cleanDate.substring(1);
 
+        let y, m, day;
         if (cleanDate && (cleanDate.includes('/') || cleanDate.includes('-'))) {
             const parts = cleanDate.split(/\/|-/);
-            y = parseInt(parts[0], 10);
-            m = parseInt(parts[1], 10);
-            day = parseInt(parts[2], 10);
+            y = parts[0]; m = parts[1].padStart(2, '0'); day = parts[2].padStart(2, '0');
         } else {
             const d = new Date(ex.id);
-            y = d.getFullYear(); 
-            m = d.getMonth() + 1; 
-            day = d.getDate();
+            y = d.getFullYear(); m = String(d.getMonth() + 1).padStart(2, '0'); day = String(d.getDate()).padStart(2, '0');
         }
 
-        if(!tree[y]) tree[y] = {};
-        if(!tree[y][m]) tree[y][m] = {};
-        if(!tree[y][m][day]) tree[y][m][day] = [];
-        tree[y][m][day].push(ex);
+        const monthKey = `${y}年 ${m}月份`;
+        const dateKey = `${y}/${m}/${day}`;
+
+        if(!tree[monthKey]) tree[monthKey] = { totalExp: 0, days: {} };
+        if(!tree[monthKey].days[dateKey]) tree[monthKey].days[dateKey] = { totalExp: 0, records: [] };
+        
+        tree[monthKey].days[dateKey].records.push(ex);
+        
+        // 分別累加總支出
+        if (ex.type === 'expense') {
+            tree[monthKey].totalExp += ex.amount;
+            tree[monthKey].days[dateKey].totalExp += ex.amount;
+        }
     });
 
-    Object.keys(tree).sort((a,b)=>b-a).forEach(y => {
-        const yDiv = document.createElement('div'); yDiv.className = 'history-year'; yDiv.innerText = `${y}年`;
-        container.appendChild(yDiv);
-        Object.keys(tree[y]).map(Number).sort((a,b)=>b-a).forEach(m => {
-            const mWrapper = document.createElement('div'); mWrapper.className = 'history-month-wrapper';
-            const mHeader = document.createElement('div'); mHeader.className = 'history-month-header'; mHeader.innerText = `${m}月份`;
-            const daysContainer = document.createElement('div'); daysContainer.className = 'history-days-container'; daysContainer.style.display = 'none';
-            mHeader.onclick = () => {
-                const isHidden = daysContainer.style.display === 'none';
-                daysContainer.style.display = isHidden ? 'block' : 'none';
-            };
-            Object.keys(tree[y][m]).map(Number).sort((a,b)=>b-a).forEach(d => {
-                const dWrapper = document.createElement('div'); dWrapper.className = 'history-day-wrapper';
-                const dHeader = document.createElement('div'); dHeader.className = 'history-day-header'; dHeader.innerText = `${m}月${d}日`;
-                const recordsContainer = document.createElement('div'); recordsContainer.className = 'history-records-container'; recordsContainer.style.display = 'none';
-                dHeader.onclick = () => { recordsContainer.style.display = recordsContainer.style.display === 'none' ? 'block' : 'none'; };
-                tree[y][m][d].forEach(ex => {
-                    const rDiv = document.createElement('div'); rDiv.className = 'history-record';
-                    const color = CAT_COLORS[ex.category] || "#ccc";
-                    const displayAmt = ex.type === 'income' ? `+${ex.amount}` : `$${ex.amount}`;
-                    const amtColor = ex.type === 'income' ? 'var(--income-color)' : 'var(--text-color)';
-                    rDiv.innerHTML = `<div class="color-indicator" style="background:${color}; width:10px; height:10px; border-radius:50%;"></div><span style="flex:1; font-size:13px;">${ex.category} <span style="color:#8fa3ad; font-size:11px;">${ex.memo ? '('+ex.memo+')' : ''}</span></span><span style="color:${amtColor}; font-weight:bold;">${displayAmt}</span>`;
-                    recordsContainer.appendChild(rDiv);
-                });
-                dWrapper.appendChild(dHeader); dWrapper.appendChild(recordsContainer); daysContainer.appendChild(dWrapper);
-            });
-            mWrapper.appendChild(mHeader); mWrapper.appendChild(daysContainer); container.appendChild(mWrapper);
+    // 依月份遞減排序顯示
+    Object.keys(tree).sort((a,b)=>b.localeCompare(a)).forEach(monthKey => {
+        const mData = tree[monthKey];
+        
+        const mWrapper = document.createElement('div'); 
+        mWrapper.className = 'history-month-wrapper';
+        
+        // 月份標題 + 月總支出
+        const mHeader = document.createElement('div'); 
+        mHeader.className = 'history-month-header';
+        mHeader.innerHTML = `<span>${monthKey}</span><span style="color:var(--danger); font-size:14px;">月總花費: $${mData.totalExp}</span>`;
+        
+        const daysContainer = document.createElement('div'); 
+        daysContainer.className = 'history-days-container';
+        
+        // 日期由近到遠排序
+        Object.keys(mData.days).sort((a,b)=>b.localeCompare(a)).forEach(dateKey => {
+            const dData = mData.days[dateKey];
+            
+            // 擷取 MM/DD 作為顯示
+            const displayDay = dateKey.split('/')[1] + '/' + dateKey.split('/')[2];
+            
+            const dRow = document.createElement('div'); 
+            dRow.className = 'history-day-row';
+            dRow.innerHTML = `
+                <div class="day-info">
+                    <span class="day-date">${displayDay}</span>
+                    <span class="day-total">日總花費: $${dData.totalExp}</span>
+                </div>
+                <div class="day-arrow">➔</div>
+            `;
+            
+            // 點擊後開啟明細視窗，把當日所有紀錄傳過去
+            dRow.onclick = () => openDayDetail(dateKey, dData.records);
+            daysContainer.appendChild(dRow);
         });
+        
+        mWrapper.appendChild(mHeader); 
+        mWrapper.appendChild(daysContainer); 
+        container.appendChild(mWrapper);
     });
+    
+    if (Object.keys(tree).length === 0) {
+        container.innerHTML = '<div style="text-align:center; margin-top: 30px; color:#8fa3ad;">目前還沒有紀錄喔！</div>';
+    }
+}
+
+// 🌟 開啟單日明細視窗
+function openDayDetail(dateString, records) {
+    const modal = document.getElementById('day-detail-modal');
+    document.getElementById('detail-date-title').innerText = dateString;
+    
+    // 只撈出支出來畫圓餅圖
+    const expensesOnly = records.filter(e => e.type === 'expense');
+    let grandTotal = 0;
+    const totals = {};
+    
+    expensesOnly.forEach(ex => { 
+        totals[ex.category] = (totals[ex.category] || 0) + ex.amount; 
+        grandTotal += ex.amount;
+    });
+    
+    const labels = Object.keys(totals).filter(k => totals[k] > 0);
+    const data = labels.map(k => totals[k]);
+    const bgColors = labels.map(k => CAT_COLORS[k] || "#ccc");
+    
+    const ctx = document.getElementById('detailExpenseChart').getContext('2d');
+    if (detailPieChart) detailPieChart.destroy();
+    
+    detailPieChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 2, borderColor: '#f2f5f6' }] },
+        options: { 
+            cutout: '75%', 
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            let value = context.raw || 0;
+                            let percentage = grandTotal > 0 ? Math.round((value / grandTotal) * 100) + '%' : '0%';
+                            return label ? label + ': ' + percentage : percentage;
+                        }
+                    }
+                }
+            } 
+        }
+    });
+    
+    document.getElementById('detail-chart-center-text').innerHTML = `<span style="font-size:12px; color:#8fa3ad; margin-bottom:2px;">當日總支出</span><span style="font-size:22px; font-weight:bold; color:var(--text-color);">$${grandTotal}</span>`;
+    
+    // 渲染下方條列 (這裡為了畫面純淨度，就不做刪除滑動功能了，純檢視)
+    const listContainer = document.getElementById('detail-list-container');
+    listContainer.innerHTML = '';
+    
+    [...records].reverse().forEach(ex => {
+        const item = document.createElement('div');
+        item.className = 'list-item static-item'; 
+        
+        const color = CAT_COLORS[ex.category] || "#ccc";
+        const displayAmt = ex.type === 'income' ? `+${ex.amount}` : `$${ex.amount}`;
+        const amtColor = ex.type === 'income' ? 'var(--income-color)' : 'var(--text-color)';
+        
+        item.innerHTML = `
+            <div class="color-indicator" style="background:${color}"></div>
+            <div style="flex:1">
+                <div class="list-cat">${ex.category}</div>
+                <div class="list-memo">${ex.memo || ''}</div>
+            </div>
+            <div class="list-amt" style="color:${amtColor}">${displayAmt}</div>
+        `;
+        listContainer.appendChild(item);
+    });
+    
+    // 加上 show 類別，觸發滑出動畫
+    modal.classList.add('show');
+}
+
+// 關閉單日明細視窗
+function closeDayDetail() {
+    document.getElementById('day-detail-modal').classList.remove('show');
 }

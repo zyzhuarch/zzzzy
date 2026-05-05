@@ -4,20 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>看看你花了多少!</title>
-    <!-- 給蘋果 iOS (Safari) 認明專用的圖示 -->
-    <link rel="apple-touch-icon" href="icon.jpg">
-    <!-- 給 Android (Chrome) 等其他瀏覽器認明用的圖示 -->
+    <link rel="apple-touch-icon" href="app-icon.png">
     <link rel="icon" type="image/jpg" sizes="192x192" href="icon.jpg">
     <link rel="icon" type="image/jpg" sizes="512x512" href="icon.jpg">
-
-    <!-- 塔塔加碼：讓它看起來更像真實的 APP -->
-    <!-- 1. 設定加到主畫面時預設顯示的 APP 名稱 -->
-    <meta name="apple-mobile-web-app-title" content="BE RICH"> 
-    <!-- 2. 隱藏 Safari 的網址列和下方導覽列 (全螢幕模式) -->
+    <meta name="apple-mobile-web-app-title" content="be rich"> 
     <meta name="apple-mobile-web-app-capable" content="yes"> 
-    <!-- 3. 設定頂部狀態列的顏色風格 -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="style.css">    
 </head>
@@ -85,6 +77,23 @@
             <div id="monthly-content"></div>
         </div>
     </div>
+
+    <!-- 🌟 新增：單日明細滑動視窗 -->
+    <div id="day-detail-modal">
+        <div class="modal-header">
+            <span class="back-btn" onclick="closeDayDetail()">❮ 返回</span>
+            <span id="detail-date-title">日期</span>
+            <div style="width: 60px;"></div> <!-- 用來平衡排版讓標題置中 -->
+        </div>
+        <div class="modal-content">
+            <div id="detail-chart-container">
+                <canvas id="detailExpenseChart"></canvas>
+                <div id="detail-chart-center-text"></div>
+            </div>
+            <div id="detail-list-container"></div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
