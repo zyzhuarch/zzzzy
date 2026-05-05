@@ -16,7 +16,7 @@ let currentType = 'expense';
 let selectedCategory = "";
 let pieChart = null;
 
-// 🌟 取得台灣當地今天的日期 YYYY-MM-DD
+// 取得台灣當地今天的日期 YYYY-MM-DD
 function getLocalToday() {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -25,18 +25,22 @@ function getLocalToday() {
     return `${yyyy}-${mm}-${dd}`;
 }
 
-// 當網頁載入時
 window.onload = async () => {
     renderCategoryGrid();
-    
-    // 預設日期設為今天
     document.getElementById('date-input').value = getLocalToday();
     
     try {
         const response = await fetch(API_URL);
         const data = await response.json();
         if (data && data.length > 0) {
-            expenses = data;
+            // 🌟 將雲端傳來的日期強制當作「純字串」處理
+            expenses = data.map(record => {
+                // 如果雲端偷偷幫我們加了 T 或是 Z (代表它轉成時間物件了)，我們只取前面的日期部分
+                if (record.date && record.date.includes('T')) {
+                    record.date = record.date.split('T')[0].replace(/-/g, '/');
+                }
+                return record;
+            });
             localStorage.setItem('my_expenses', JSON.stringify(expenses));
         } else {
             expenses = JSON.parse(localStorage.getItem('my_expenses')) || [];
@@ -128,7 +132,6 @@ function renderCategoryGrid() {
     });
 }
 
-// 🌟 新增資料時，帶入選擇的日期
 async function addRecord() {
     const amt = document.getElementById('amount-input').value;
     const memo = document.getElementById('memo-input').value;
@@ -136,22 +139,23 @@ async function addRecord() {
     
     if (!selectedCategory || !amt || !dateVal) return alert("大大，請選擇分類、日期並輸入金額喔！");
 
-    // 將 YYYY-MM-DD 轉成 YYYY/MM/DD 格式存入雲端
-    const formattedDate = dateVal.replace(/-/g, '/');
+    // 🌟 在日期字串前面加上一個單引號（'），這會告訴 Google 試算表：「這是一串純文字，請不要把它當作日期轉換時區！」
+    // 雖然雲端會存入單引號，但在網頁上我們只會取用它後面的值。
+    const formattedDate = "'" + dateVal.replace(/-/g, '/');
 
     const newRecord = { 
-        id: Date.now(), // 保留時間戳作為獨一無二的刪除 ID
+        id: Date.now(), 
         type: currentType, 
         category: selectedCategory, 
         amount: parseInt(amt), 
         memo: memo, 
-        date: formattedDate // 傳送正確的當地時間字串
+        // 傳送純文字日期
+        date: formattedDate 
     };
 
     expenses.push(newRecord);
     localStorage.setItem('my_expenses', JSON.stringify(expenses));
     
-    // 記完帳後清除金額與備註，但保留日期方便補記同一天
     document.getElementById('amount-input').value = "";
     document.getElementById('memo-input').value = "";
     selectedCategory = "";
@@ -186,10 +190,32 @@ function updateStats() {
 
     const ctx = document.getElementById('expenseChart').getContext('2d');
     if (pieChart) pieChart.destroy();
+    
+    // 🌟 圓餅圖提示：將原本的花費數字改成百分比顯示
     pieChart = new Chart(ctx, {
         type: 'doughnut',
         data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 2, borderColor: '#f2f5f6' }] },
-        options: { cutout: '75%', plugins: { legend: { display: false } } }
+        options: { 
+            cutout: '75%', 
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            let value = context.raw || 0;
+                            // 計算這塊餅佔總金額的百分比
+                            let percentage = Math.round((value / grandTotal) * 100) + '%';
+                            if (label) {
+                                label += ': ';
+                            }
+                            // 回傳 分類: XX%
+                            return label + percentage;
+                        }
+                    }
+                }
+            } 
+        }
     });
 
     const typeLabel = currentType === 'expense' ? '總支出' : '總收入';
@@ -234,11 +260,17 @@ function updateStats() {
         const displayAmt = ex.type === 'income' ? `+${ex.amount}` : `$${ex.amount}`;
         const amtColor = ex.type === 'income' ? 'var(--income-color)' : 'var(--text-color)';
 
+        // 清理顯示的日期：如果是字串，把開頭的防護用單引號拿掉
+        let cleanDate = ex.date;
+        if(typeof cleanDate === 'string' && cleanDate.startsWith("'")) {
+             cleanDate = cleanDate.substring(1);
+        }
+
         item.innerHTML = `
             <div class="color-indicator" style="background:${color}"></div>
             <div style="flex:1">
                 <div class="list-cat">${ex.category}</div>
-                <div class="list-memo">${ex.memo || ''} (${ex.date})</div>
+                <div class="list-memo">${ex.memo || ''} (${cleanDate})</div>
             </div>
             <div class="list-amt" style="color:${amtColor}">${displayAmt}</div>
         `;
@@ -278,7 +310,6 @@ function switchTab(tab, btnElement) {
     document.getElementById('list-container-wrapper').style.display = tab === 'list' ? 'flex' : 'none';
 }
 
-// 🌟 解析日期時，強制使用 YYYY/MM/DD 字串解析，避免時區錯亂
 function renderMonthlyView() {
     const container = document.getElementById('monthly-content');
     container.innerHTML = '';
@@ -286,15 +317,18 @@ function renderMonthlyView() {
     expenses.forEach(ex => {
         let y, m, day;
         
-        // 解析 YYYY/MM/DD 字串，相容於有斜線或減號的日期格式
-        if (ex.date && (ex.date.includes('/') || ex.date.includes('-'))) {
-            // 切割出年、月、日字串並轉為數字
-            const parts = ex.date.split(/\/|-/);
+        // 🌟 清理單引號
+        let cleanDate = ex.date;
+        if(typeof cleanDate === 'string' && cleanDate.startsWith("'")) {
+             cleanDate = cleanDate.substring(1);
+        }
+
+        if (cleanDate && (cleanDate.includes('/') || cleanDate.includes('-'))) {
+            const parts = cleanDate.split(/\/|-/);
             y = parseInt(parts[0], 10);
             m = parseInt(parts[1], 10);
             day = parseInt(parts[2], 10);
         } else {
-            // 如果遇到非常舊的紀錄，當作備用解析方案
             const d = new Date(ex.id);
             y = d.getFullYear(); 
             m = d.getMonth() + 1; 
