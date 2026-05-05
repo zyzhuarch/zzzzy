@@ -8,24 +8,17 @@
     <link rel="stylesheet" href="style.css">    
 </head>
 <body>
-    <div id="loading-screen">
-        <div class="loader">Yong-Zhu</div>
-    </div>
+    <div id="loading-screen"><div class="loader">Yong-Zhu</div></div>
 
-    <div class="header">
-        <span>看看你花了多少!</span>
-    </div>
+    <div class="header"><span>看看你花了多少!</span></div>
 
-    <!-- 唯一的主畫面 -->
     <div id="main-container">
-        
-        <!-- 上半部：統計與紀錄區 -->
+        <!-- 上半部：統計區 -->
         <div id="stats-section">
-            <div class="toggle-group">
+            <div class="toggle-group main-toggle">
                 <button class="toggle-btn active" onclick="switchTab('chart')">圓餅圖</button>
                 <button class="toggle-btn" onclick="switchTab('list')">條列檢視</button>
             </div>  
-            
             <div id="display-area">
                 <div id="chart-container"><canvas id="expenseChart"></canvas></div>
                 <div id="list-container"></div>
@@ -36,18 +29,23 @@
 
         <!-- 下半部：輸入區 -->
         <div id="input-section">
+            <!-- 新增：收支切換 -->
+            <div class="type-toggle-group">
+                <button id="type-exp" class="type-btn active" onclick="setRecordType('expense')">支出</button>
+                <button id="type-inc" class="type-btn" onclick="setRecordType('income')">收入</button>
+            </div>
+
             <div class="section-title">選擇分類</div>
             <div id="category-grid" class="category-grid"></div>
             
             <div class="input-group">
-                <input type="number" id="amount-input" placeholder="輸入金額" inputmode="decimal">
-                <input type="text" id="memo-input" placeholder="備註 (選填)">
+                <input type="number" id="amount-input" placeholder="金額" inputmode="decimal">
+                <input type="text" id="memo-input" placeholder="備註">
             </div>
             
-            <button id="add-btn" onclick="addExpense()">確認紀錄</button>
+            <button id="add-btn" onclick="addRecord()">確認紀錄</button>
         </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
