@@ -3,29 +3,26 @@ let expenses = JSON.parse(localStorage.getItem('my_expenses')) || [];
 let selectedCategory = "";
 let pieChart = null;
 
-// 初始化
+// 初始化分類按鈕
 window.onload = () => {
-    // 渲染分類按鈕
     const grid = document.getElementById('category-grid');
     CATEGORIES.forEach(cat => {
         const btn = document.createElement('div');
         btn.className = 'cat-btn';
         btn.innerText = cat;
-        btn.onclick = () => selectCategory(cat, btn);
+        btn.onclick = () => {
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedCategory = cat;
+        };
         grid.appendChild(btn);
     });
-
     setTimeout(() => {
-        document.getElementById('loading-screen').style.opacity = '0';
-        setTimeout(() => document.getElementById('loading-screen').style.display = 'none', 500);
+        const loader = document.getElementById('loading-screen');
+        loader.style.opacity = '0';
+        setTimeout(() => loader.style.display = 'none', 500);
     }, 1000);
 };
-
-function selectCategory(cat, btn) {
-    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    selectedCategory = cat;
-}
 
 function switchScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -43,35 +40,18 @@ function switchTab(tab) {
 function addExpense() {
     const amt = document.getElementById('amount-input').value;
     const memo = document.getElementById('memo-input').value;
+    if (!selectedCategory || !amt) return alert("請選擇分類並輸入金額！");
 
-    if (!selectedCategory || !amt) {
-        alert("大大，請選擇分類並輸入金額喔！");
-        return;
-    }
-
-    const newRecord = {
-        id: Date.now(),
-        category: selectedCategory,
-        amount: parseInt(amt),
-        memo: memo,
-        date: new Date().toLocaleDateString()
-    };
-
-    expenses.push(newRecord);
+    expenses.push({ id: Date.now(), category: selectedCategory, amount: parseInt(amt), memo, date: new Date().toLocaleDateString() });
     localStorage.setItem('my_expenses', JSON.stringify(expenses));
-    
-    // 清空輸入
     document.getElementById('amount-input').value = "";
     document.getElementById('memo-input').value = "";
-    alert("✅ 紀錄成功！");
+    alert("✅ 已紀錄");
 }
 
 function updateStats() {
-    // 1. 處理圖表數據
-    const totals = {};
-    CATEGORIES.forEach(c => totals[c] = 0);
+    const totals = {}; CATEGORIES.forEach(c => totals[c] = 0);
     expenses.forEach(ex => totals[ex.category] += ex.amount);
-
     const labels = Object.keys(totals).filter(k => totals[k] > 0);
     const data = labels.map(k => totals[k]);
 
@@ -79,26 +59,19 @@ function updateStats() {
     if (pieChart) pieChart.destroy();
     pieChart = new Chart(ctx, {
         type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{ data: data, backgroundColor: ['#333', '#555', '#777', '#999', '#BBB', '#DDD', '#E5E5E5', '#F0F0F0', '#2C2C2C', '#4A4A4A', '#888'], borderWidth: 0 }]
-        },
+        data: { labels, datasets: [{ data, backgroundColor: ['#333', '#555', '#777', '#999', '#BBB', '#DDD', '#E5E5E5', '#F0F0F0', '#2C2C2C', '#4A4A4A', '#888'], borderWidth: 0 }] },
         options: { cutout: '70%', plugins: { legend: { position: 'bottom' } } }
     });
 
-    // 2. 渲染列表與滑動刪除
     const container = document.getElementById('list-container');
     container.innerHTML = "";
     [...expenses].reverse().forEach(ex => {
         const wrapper = document.createElement('div');
         wrapper.className = 'list-item-wrapper';
         
-        const item = document.createElement('div');
-        item.className = 'list-item';
-        item.innerHTML = `<div><div class="list-cat">${ex.category}</div><div class="list-memo">${ex.memo || ''} (${ex.date})</div></div><div class="list-amt">$${ex.amount}</div>`;
-        
+        // 紅色刪除按鈕 (底層)
         const delBtn = document.createElement('div');
-        delBtn.className = 'delete-label';
+        delBtn.className = 'delete-btn';
         delBtn.innerText = "刪除";
         delBtn.onclick = () => {
             if(confirm("確定要刪除這筆紀錄嗎？")) {
@@ -108,14 +81,24 @@ function updateStats() {
             }
         };
 
-        // 滑動偵測
+        // 白色內容區 (頂層)
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.innerHTML = `<div><div class="list-cat">${ex.category}</div><div class="list-memo">${ex.memo || ''}</div></div><div class="list-amt">$${ex.amount}</div>`;
+        
+        // 滑動邏輯 (相容滑鼠與觸控)
         let startX = 0;
-        item.ontouchstart = (e) => startX = e.touches[0].clientX;
-        item.ontouchmove = (e) => {
-            let diff = startX - e.touches[0].clientX;
+        const handleStart = (x) => startX = x;
+        const handleMove = (x) => {
+            let diff = startX - x;
             if (diff > 50) item.classList.add('swiped');
             if (diff < -50) item.classList.remove('swiped');
         };
+
+        item.addEventListener('touchstart', (e) => handleStart(e.touches[0].clientX));
+        item.addEventListener('touchmove', (e) => handleMove(e.touches[0].clientX));
+        item.addEventListener('mousedown', (e) => handleStart(e.clientX));
+        item.addEventListener('mousemove', (e) => { if(e.buttons === 1) handleMove(e.clientX); });
 
         wrapper.appendChild(delBtn);
         wrapper.appendChild(item);
