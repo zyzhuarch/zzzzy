@@ -7,8 +7,8 @@
     <!-- 給蘋果 iOS (Safari) 認明專用的圖示 -->
     <link rel="apple-touch-icon" href="app-icon.png">
     <!-- 給 Android (Chrome) 等其他瀏覽器認明用的圖示 -->
-    <link rel="icon" type="image/png" sizes="192x192" href="app-icon.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="app-icon.png">
+    <link rel="icon" type="image/jpg" sizes="192x192" href="icon.jpg">
+    <link rel="icon" type="image/jpg" sizes="512x512" href="icon.jpg">
 
     <!-- 塔塔加碼：讓它看起來更像真實的 APP -->
     <!-- 1. 設定加到主畫面時預設顯示的 APP 名稱 -->
@@ -69,9 +69,11 @@
 
                 <div class="section-title">選擇分類</div>
                 <div id="category-grid" class="category-grid"></div>
-                
                 <div class="input-group">
+                    <input type="date" id="date-input">
                     <input type="number" id="amount-input" placeholder="金額" inputmode="decimal">
+                </div>
+                <div class="input-group">
                     <input type="text" id="memo-input" placeholder="備註 (選填)">
                 </div>
                 

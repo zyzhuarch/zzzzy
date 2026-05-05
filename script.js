@@ -16,9 +16,21 @@ let currentType = 'expense';
 let selectedCategory = "";
 let pieChart = null;
 
-// 當網頁載入時，從 Google 雲端抓取資料
+// 🌟 取得台灣當地今天的日期 YYYY-MM-DD
+function getLocalToday() {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+// 當網頁載入時
 window.onload = async () => {
     renderCategoryGrid();
+    
+    // 預設日期設為今天
+    document.getElementById('date-input').value = getLocalToday();
     
     try {
         const response = await fetch(API_URL);
@@ -116,24 +128,30 @@ function renderCategoryGrid() {
     });
 }
 
-// 🌟 修改點 1：傳送給雲端時，包裝成 action: 'add'
+// 🌟 新增資料時，帶入選擇的日期
 async function addRecord() {
     const amt = document.getElementById('amount-input').value;
     const memo = document.getElementById('memo-input').value;
-    if (!selectedCategory || !amt) return alert("大大，請選擇分類並輸入金額喔！");
+    const dateVal = document.getElementById('date-input').value;
+    
+    if (!selectedCategory || !amt || !dateVal) return alert("大大，請選擇分類、日期並輸入金額喔！");
+
+    // 將 YYYY-MM-DD 轉成 YYYY/MM/DD 格式存入雲端
+    const formattedDate = dateVal.replace(/-/g, '/');
 
     const newRecord = { 
-        id: Date.now(), 
+        id: Date.now(), // 保留時間戳作為獨一無二的刪除 ID
         type: currentType, 
         category: selectedCategory, 
         amount: parseInt(amt), 
         memo: memo, 
-        date: new Date().toLocaleDateString() 
+        date: formattedDate // 傳送正確的當地時間字串
     };
 
     expenses.push(newRecord);
     localStorage.setItem('my_expenses', JSON.stringify(expenses));
     
+    // 記完帳後清除金額與備註，但保留日期方便補記同一天
     document.getElementById('amount-input').value = "";
     document.getElementById('memo-input').value = "";
     selectedCategory = "";
@@ -144,7 +162,6 @@ async function addRecord() {
         await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            // 加上 action: 'add' 讓試算表知道這是新增
             body: JSON.stringify({ action: "add", data: newRecord }) 
         });
         console.log("成功同步新增到雲端！");
@@ -190,17 +207,14 @@ function updateStats() {
         delBtn.className = 'delete-btn';
         delBtn.innerText = "刪除";
         
-        // 🌟 修改點 2：刪除時，同步發送 action: 'delete' 給雲端
         delBtn.onclick = async () => {
             if(confirm("確定要刪除嗎？")) {
                 const targetId = ex.id;
                 
-                // 1. 先刪除網頁本機畫面
                 expenses = expenses.filter(e => e.id !== targetId);
                 localStorage.setItem('my_expenses', JSON.stringify(expenses));
                 updateStats();
                 
-                // 2. 告訴雲端砍掉這筆資料
                 try {
                     await fetch(API_URL, {
                         method: 'POST',
@@ -264,13 +278,29 @@ function switchTab(tab, btnElement) {
     document.getElementById('list-container-wrapper').style.display = tab === 'list' ? 'flex' : 'none';
 }
 
+// 🌟 解析日期時，強制使用 YYYY/MM/DD 字串解析，避免時區錯亂
 function renderMonthlyView() {
     const container = document.getElementById('monthly-content');
     container.innerHTML = '';
     const tree = {};
     expenses.forEach(ex => {
-        const d = new Date(ex.id);
-        const y = d.getFullYear(); const m = d.getMonth() + 1; const day = d.getDate();
+        let y, m, day;
+        
+        // 解析 YYYY/MM/DD 字串，相容於有斜線或減號的日期格式
+        if (ex.date && (ex.date.includes('/') || ex.date.includes('-'))) {
+            // 切割出年、月、日字串並轉為數字
+            const parts = ex.date.split(/\/|-/);
+            y = parseInt(parts[0], 10);
+            m = parseInt(parts[1], 10);
+            day = parseInt(parts[2], 10);
+        } else {
+            // 如果遇到非常舊的紀錄，當作備用解析方案
+            const d = new Date(ex.id);
+            y = d.getFullYear(); 
+            m = d.getMonth() + 1; 
+            day = d.getDate();
+        }
+
         if(!tree[y]) tree[y] = {};
         if(!tree[y][m]) tree[y][m] = {};
         if(!tree[y][m][day]) tree[y][m][day] = [];
@@ -298,7 +328,7 @@ function renderMonthlyView() {
                     const color = CAT_COLORS[ex.category] || "#ccc";
                     const displayAmt = ex.type === 'income' ? `+${ex.amount}` : `$${ex.amount}`;
                     const amtColor = ex.type === 'income' ? 'var(--income-color)' : 'var(--text-color)';
-                    rDiv.innerHTML = `<div class="color-indicator" style="background:${color}; width:10px; height:10px; border-radius:50%;"></div><span style="flex:1; font-size:13px;">${ex.category}</span><span style="color:${amtColor}; font-weight:bold;">${displayAmt}</span>`;
+                    rDiv.innerHTML = `<div class="color-indicator" style="background:${color}; width:10px; height:10px; border-radius:50%;"></div><span style="flex:1; font-size:13px;">${ex.category} <span style="color:#8fa3ad; font-size:11px;">${ex.memo ? '('+ex.memo+')' : ''}</span></span><span style="color:${amtColor}; font-weight:bold;">${displayAmt}</span>`;
                     recordsContainer.appendChild(rDiv);
                 });
                 dWrapper.appendChild(dHeader); dWrapper.appendChild(recordsContainer); daysContainer.appendChild(dWrapper);
