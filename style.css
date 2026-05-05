@@ -12,13 +12,11 @@
 body { background-color: var(--bg-color); color: var(--text-color); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
 .header { height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; font-weight: bold; font-size: 18px; background: var(--white); z-index: 100; flex-shrink: 0; }
-.header-spacer { width: 30px; } /* 用來平衡右邊漢堡按鈕的空間讓標題置中 */
+.header-spacer { width: 30px; } 
 
-/* 漢堡按鈕圖示 */
 .menu-icon { width: 30px; height: 20px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; }
 .menu-icon div { height: 3px; background-color: var(--primary); border-radius: 3px; transition: 0.3s; }
 
-/* 抽屜導覽列 */
 #nav-drawer { position: fixed; top: 0; right: -70vw; width: 70vw; height: 100%; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); z-index: 1000; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); padding: 30px 20px; box-shadow: -5px 0 15px rgba(0,0,0,0.05); }
 #nav-drawer.open { transform: translateX(-70vw); }
 
@@ -29,14 +27,12 @@ body { background-color: var(--bg-color); color: var(--text-color); height: 100d
 .nav-item { padding: 15px; font-size: 18px; font-weight: bold; color: #8fa3ad; border-radius: 12px; transition: 0.3s; cursor: pointer; }
 .nav-item.active { background: var(--bg-color); color: var(--primary); }
 
-/* 選單背景遮罩 */
 #menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.2); opacity: 0; visibility: hidden; z-index: 999; transition: 0.3s; backdrop-filter: blur(0px); }
 #menu-overlay.show { opacity: 1; visibility: visible; backdrop-filter: blur(4px); }
 
 #main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 #daily-view { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-/* 統計區 */
 #stats-section { flex: 0 0 42%; display: flex; flex-direction: column; padding: 10px 20px; overflow: hidden; }
 .toggle-group { display: flex; background: #e3ecee; border-radius: 14px; padding: 4px; margin-bottom: 10px; flex-shrink: 0; }
 .toggle-btn { flex: 1; padding: 8px 0; border: none; background: transparent; border-radius: 12px; cursor: pointer; font-weight: bold; color: #8fa3ad; transition: 0.3s; font-size: 13px; }
@@ -50,7 +46,6 @@ body { background-color: var(--bg-color); color: var(--text-color); height: 100d
 #list-total { text-align: center; font-weight: bold; font-size: 14px; color: var(--text-color); margin-bottom: 5px; padding: 8px; background: #e3ecee; border-radius: 10px; }
 #list-container { width: 100%; display: flex; flex-direction: column; gap: 8px; }
 
-/* 輸入區 */
 #input-section { flex: 1; padding: 20px; background: var(--white); border-radius: 28px 28px 0 0; box-shadow: 0 -4px 20px rgba(117,147,161,0.1); overflow-y: auto; display: flex; flex-direction: column; }
 .type-toggle-group { display: flex; gap: 10px; margin-bottom: 15px; flex-shrink: 0; }
 .type-btn { flex: 1; padding: 12px; border-radius: 16px; border: 1px solid var(--border-color); background: #f8fafa; cursor: pointer; font-weight: bold; color: #8fa3ad; transition: 0.3s; font-size: 14px; }
@@ -65,18 +60,39 @@ body { background-color: var(--bg-color); color: var(--text-color); height: 100d
 
 #add-btn { background: var(--primary); color: var(--white); border: none; padding: 16px; border-radius: 16px; font-weight: bold; font-size: 16px; width: 100%; flex-shrink: 0; box-shadow: 0 4px 12px rgba(117,147,161,0.25); transition: 0.2s; }
 
-/* 刪除動畫相關 */
 .list-item-wrapper { position: relative; border-radius: 16px; background: var(--danger); margin-bottom: 6px; overflow: hidden; height: 60px; flex-shrink: 0;}
 .delete-btn { position: absolute; right: 0; top: 0; width: 80px; height: 100%; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 14px; z-index: 1; cursor: pointer; }
 .list-item { position: relative; z-index: 2; width: 100%; height: 100%; background: var(--white); border: 1px solid var(--border-color); border-radius: 16px; display: flex; align-items: center; padding: 0 16px; transition: transform 0.3s ease; }
 .list-item.swiped { transform: translateX(-80px); }
+.color-indicator { width: 12px; height: 12px; border-radius: 4px; margin-right: 12px; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.list-cat { font-weight: bold; font-size: 13px; margin-bottom: 2px;}
+.list-memo { font-size: 11px; color: #8fa3ad; }
+.list-amt { font-weight: bold; font-size: 15px; color: var(--text-color); }
 
 #loading-screen { position: absolute; width: 100%; height: 100%; background: var(--bg-color); color: var(--primary); display: flex; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s; font-size: 20px; font-weight: bold;}
 
-/* 月紀錄視圖 */
+/* 🌟 月紀錄：變成月曆清單風格 */
 #monthly-view { display: none; flex: 1; overflow-y: auto; padding: 20px; }
-.history-year { font-size: 18px; font-weight: bold; color: var(--text-color); margin: 15px 0 10px 0; border-bottom: 2px solid #d1dcde; padding-bottom: 5px; }
-.history-month-header { background: var(--white); padding: 14px 16px; border-radius: 12px; font-weight: bold; color: var(--primary); cursor: pointer; margin-bottom: 10px; border: 1px solid var(--border-color); }
-.history-days-container { padding-left: 15px; margin-bottom: 15px; }
-.history-day-header { padding: 8px 12px; background: #e3ecee; border-radius: 8px; font-size: 13px; font-weight: bold; margin-bottom: 5px; cursor: pointer; }
-.history-record { display: flex; align-items: center; padding: 10px; background: var(--white); border-radius: 8px; margin-bottom: 4px; gap: 10px; border: 1px solid #f2f5f6; }
+.history-month-header { background: var(--white); padding: 18px 20px; border-radius: 18px; font-weight: bold; font-size: 16px; color: var(--text-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border: none; }
+.history-days-container { display: flex; flex-direction: column; gap: 8px; margin-bottom: 30px; }
+.history-day-row { background: var(--white); border-radius: 16px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.2s; border: 1px solid var(--border-color); }
+.history-day-row:active { transform: scale(0.98); }
+.day-info { display: flex; flex-direction: column; gap: 4px; }
+.day-date { font-weight: bold; font-size: 15px; color: var(--text-color); }
+.day-total { font-size: 13px; color: var(--danger); font-weight: 500;}
+.day-arrow { color: #8fa3ad; font-weight: bold; font-size: 18px; }
+
+/* 🌟 單日明細滑出視窗 */
+#day-detail-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 2000; transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
+#day-detail-modal.show { transform: translateX(0); }
+
+.modal-header { height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; background: var(--white); font-weight: bold; font-size: 16px; color: var(--text-color); box-shadow: 0 2px 10px rgba(0,0,0,0.05); flex-shrink: 0; }
+.back-btn { color: var(--primary); cursor: pointer; font-size: 15px; display: flex; align-items: center; width: 60px; transition: 0.2s;}
+.back-btn:active { opacity: 0.5; }
+
+.modal-content { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+#detail-chart-container { position: relative; width: 100%; max-width: 180px; height: 180px; margin: 10px auto 30px auto; flex-shrink: 0; }
+#detail-chart-center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+
+#detail-list-container { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.static-item { margin-bottom: 0; height: 65px; border-radius: 16px; background: var(--white); border: 1px solid var(--border-color); display: flex; align-items: center; padding: 0 16px; width: 100%;}
