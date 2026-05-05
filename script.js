@@ -15,8 +15,9 @@ let expenses = [];
 let currentType = 'expense'; 
 let selectedCategory = "";
 let pieChart = null;
-let detailPieChart = null; // 單日明細的專屬圓餅圖
+let detailPieChart = null;
 
+// 取得台灣當地今天的日期 YYYY-MM-DD，用於預設輸入框
 function getLocalToday() {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -33,10 +34,17 @@ window.onload = async () => {
         const response = await fetch(API_URL);
         const data = await response.json();
         if (data && data.length > 0) {
+            // 🌟 絕對字串魔法：雲端傳回來的資料，我們只取最原始的字串格式
             expenses = data.map(record => {
-                if (record.date && record.date.includes('T')) {
-                    record.date = record.date.split('T')[0].replace(/-/g, '/');
+                // 清理可能出現的單引號
+                if (typeof record.date === 'string' && record.date.startsWith("'")) {
+                    record.date = record.date.substring(1);
                 }
+                // 雲端如果有 T (時間格式)，我們只取前面的日期，並把 / 統一轉回 - 確保格式一致
+                if (record.date && record.date.includes('T')) {
+                    record.date = record.date.split('T')[0];
+                }
+                record.date = record.date.replace(/\//g, '-');
                 return record;
             });
             localStorage.setItem('my_expenses', JSON.stringify(expenses));
@@ -133,11 +141,10 @@ function renderCategoryGrid() {
 async function addRecord() {
     const amt = document.getElementById('amount-input').value;
     const memo = document.getElementById('memo-input').value;
-    const dateVal = document.getElementById('date-input').value;
+    // 🌟 抓取使用者填入的 YYYY-MM-DD
+    const dateVal = document.getElementById('date-input').value; 
     
     if (!selectedCategory || !amt || !dateVal) return alert("大大，請選擇分類、日期並輸入金額喔！");
-
-    const formattedDate = "'" + dateVal.replace(/-/g, '/');
 
     const newRecord = { 
         id: Date.now(), 
@@ -145,7 +152,8 @@ async function addRecord() {
         category: selectedCategory, 
         amount: parseInt(amt), 
         memo: memo, 
-        date: formattedDate 
+        // 🌟 網頁本機存的也是純字串 YYYY-MM-DD
+        date: dateVal 
     };
 
     expenses.push(newRecord);
@@ -157,11 +165,14 @@ async function addRecord() {
     renderCategoryGrid();
     updateStats(); 
 
+    // 傳給雲端前，加上單引號保護字串，並把 - 換成 / (試算表比較喜歡斜線)
+    const cloudRecord = { ...newRecord, date: "'" + dateVal.replace(/-/g, '/') };
+
     try {
         await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: "add", data: newRecord }) 
+            body: JSON.stringify({ action: "add", data: cloudRecord }) 
         });
         console.log("成功同步新增到雲端！");
     } catch (error) {
@@ -250,14 +261,14 @@ function updateStats() {
         const displayAmt = ex.type === 'income' ? `+${ex.amount}` : `$${ex.amount}`;
         const amtColor = ex.type === 'income' ? 'var(--income-color)' : 'var(--text-color)';
 
-        let cleanDate = ex.date;
-        if(typeof cleanDate === 'string' && cleanDate.startsWith("'")) cleanDate = cleanDate.substring(1);
+        // 🌟 網頁上的顯示，直接拿我們存的字串
+        const displayDate = ex.date || '';
 
         item.innerHTML = `
             <div class="color-indicator" style="background:${color}"></div>
             <div style="flex:1">
                 <div class="list-cat">${ex.category}</div>
-                <div class="list-memo">${ex.memo || ''} (${cleanDate})</div>
+                <div class="list-memo">${ex.memo || ''} (${displayDate})</div>
             </div>
             <div class="list-amt" style="color:${amtColor}">${displayAmt}</div>
         `;
@@ -297,25 +308,26 @@ function switchTab(tab, btnElement) {
     document.getElementById('list-container-wrapper').style.display = tab === 'list' ? 'flex' : 'none';
 }
 
-// 🌟 全新改寫的月紀錄視圖邏輯
 function renderMonthlyView() {
     const container = document.getElementById('monthly-content');
     container.innerHTML = '';
     
-    // 將資料依照 "YYYY年 MM月份" 和 "YYYY/MM/DD" 群組
     const tree = {};
     
     expenses.forEach(ex => {
-        let cleanDate = ex.date;
-        if(typeof cleanDate === 'string' && cleanDate.startsWith("'")) cleanDate = cleanDate.substring(1);
-
+        // 🌟 月紀錄的解析，只認 YYYY-MM-DD
         let y, m, day;
-        if (cleanDate && (cleanDate.includes('/') || cleanDate.includes('-'))) {
-            const parts = cleanDate.split(/\/|-/);
-            y = parts[0]; m = parts[1].padStart(2, '0'); day = parts[2].padStart(2, '0');
+        if (ex.date && ex.date.includes('-')) {
+            const parts = ex.date.split('-');
+            y = parts[0]; 
+            m = parts[1]; 
+            day = parts[2];
         } else {
+            // 如果是很舊沒有 date 欄位的資料，才用 id 解析
             const d = new Date(ex.id);
-            y = d.getFullYear(); m = String(d.getMonth() + 1).padStart(2, '0'); day = String(d.getDate()).padStart(2, '0');
+            y = String(d.getFullYear()); 
+            m = String(d.getMonth() + 1).padStart(2, '0'); 
+            day = String(d.getDate()).padStart(2, '0');
         }
 
         const monthKey = `${y}年 ${m}月份`;
@@ -326,21 +338,18 @@ function renderMonthlyView() {
         
         tree[monthKey].days[dateKey].records.push(ex);
         
-        // 分別累加總支出
         if (ex.type === 'expense') {
             tree[monthKey].totalExp += ex.amount;
             tree[monthKey].days[dateKey].totalExp += ex.amount;
         }
     });
 
-    // 依月份遞減排序顯示
     Object.keys(tree).sort((a,b)=>b.localeCompare(a)).forEach(monthKey => {
         const mData = tree[monthKey];
         
         const mWrapper = document.createElement('div'); 
         mWrapper.className = 'history-month-wrapper';
         
-        // 月份標題 + 月總支出
         const mHeader = document.createElement('div'); 
         mHeader.className = 'history-month-header';
         mHeader.innerHTML = `<span>${monthKey}</span><span style="color:var(--danger); font-size:14px;">月總花費: $${mData.totalExp}</span>`;
@@ -348,11 +357,8 @@ function renderMonthlyView() {
         const daysContainer = document.createElement('div'); 
         daysContainer.className = 'history-days-container';
         
-        // 日期由近到遠排序
         Object.keys(mData.days).sort((a,b)=>b.localeCompare(a)).forEach(dateKey => {
             const dData = mData.days[dateKey];
-            
-            // 擷取 MM/DD 作為顯示
             const displayDay = dateKey.split('/')[1] + '/' + dateKey.split('/')[2];
             
             const dRow = document.createElement('div'); 
@@ -365,7 +371,6 @@ function renderMonthlyView() {
                 <div class="day-arrow">➔</div>
             `;
             
-            // 點擊後開啟明細視窗，把當日所有紀錄傳過去
             dRow.onclick = () => openDayDetail(dateKey, dData.records);
             daysContainer.appendChild(dRow);
         });
@@ -380,12 +385,10 @@ function renderMonthlyView() {
     }
 }
 
-// 🌟 開啟單日明細視窗
 function openDayDetail(dateString, records) {
     const modal = document.getElementById('day-detail-modal');
     document.getElementById('detail-date-title').innerText = dateString;
     
-    // 只撈出支出來畫圓餅圖
     const expensesOnly = records.filter(e => e.type === 'expense');
     let grandTotal = 0;
     const totals = {};
@@ -425,7 +428,6 @@ function openDayDetail(dateString, records) {
     
     document.getElementById('detail-chart-center-text').innerHTML = `<span style="font-size:12px; color:#8fa3ad; margin-bottom:2px;">當日總支出</span><span style="font-size:22px; font-weight:bold; color:var(--text-color);">$${grandTotal}</span>`;
     
-    // 渲染下方條列 (這裡為了畫面純淨度，就不做刪除滑動功能了，純檢視)
     const listContainer = document.getElementById('detail-list-container');
     listContainer.innerHTML = '';
     
@@ -448,11 +450,9 @@ function openDayDetail(dateString, records) {
         listContainer.appendChild(item);
     });
     
-    // 加上 show 類別，觸發滑出動畫
     modal.classList.add('show');
 }
 
-// 關閉單日明細視窗
 function closeDayDetail() {
     document.getElementById('day-detail-modal').classList.remove('show');
 }
