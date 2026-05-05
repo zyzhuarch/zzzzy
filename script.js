@@ -1,5 +1,5 @@
 // 大大專屬的 API 網址
-const API_URL = "https://script.google.com/macros/s/AKfycbzutzBFrMpu7v4DFTpqZgG8rwaxYiYjrxwGeLghZdRGbKerZ4eZuDtbtv2WC6E_mf3iXg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxRIRmklPnBWwuqExGeJaPvwX2S9REtt5mRWumHnkJJUvIeBUCISY0ej124UFWcZJ3S4g/exec";
 
 const EXP_CATS = ["貓咪用品", "賣場/Costco", "餐飲", "交通", "生活/帳單", "購物/治裝", "娛樂/聚餐", "醫療/健康", "理財/投資", "數位/軟體", "嗜好/裝備"];
 const INC_CATS = ["薪資", "獎金", "中獎", "投資收入", "其他收入"];
