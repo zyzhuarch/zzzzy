@@ -1,47 +1,57 @@
 :root {
-  --bg-color: #e3e9eb;
-  --text-color: #0d2533;
-  --primary: #4c85b4;
-  --income-color: #52b788;
-  --danger: #eb291f;
+  /* 莫蘭迪高級配色系統 */
+  --bg-color: #f2f5f6;       /* 柔和灰白底色 */
+  --text-color: #4a5c68;     /* 深莫蘭迪灰藍 */
+  --primary: #7593a1;        /* 莫蘭迪主色藍 */
+  --income-color: #8dae99;   /* 莫蘭迪綠 (收入) */
+  --danger: #cf8888;         /* 柔和磚紅 (刪除) */
   --white: #ffffff;
+  --border-color: #e4ebeb;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
 body { background-color: var(--bg-color); color: var(--text-color); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
-/* 修正：輸入框均分 */
-.input-group { display: flex; gap: 10px; margin-bottom: 12px; }
-.input-group input { flex: 1; width: 0; } /* 強制均分關鍵 */
+.header { height: 50px; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 16px; color: var(--text-color); flex-shrink: 0; }
+#main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-/* 收支切換按鈕 */
-.type-toggle-group { display: flex; gap: 10px; margin-bottom: 15px; }
-.type-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #ddd; background: #eee; cursor: pointer; font-weight: bold; transition: 0.3s; }
-.type-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-#type-inc.active { background: var(--income-color); border-color: var(--income-color); }
+/* 上半部：統計區 (佔 45%) */
+#stats-section { flex: 0 0 45%; display: flex; flex-direction: column; padding: 10px 20px; overflow: hidden; }
+.toggle-group { display: flex; background: #e3ecee; border-radius: 14px; padding: 4px; margin-bottom: 15px; flex-shrink: 0; }
+.toggle-btn { flex: 1; padding: 8px 0; border: none; background: transparent; border-radius: 12px; cursor: pointer; font-weight: bold; color: #8fa3ad; transition: 0.3s; font-size: 13px; }
+.toggle-btn.active { background: var(--white); color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
-/* 修正：滑動刪除 (白色區域填滿) */
-.list-item-wrapper { position: relative; border-radius: 12px; background: var(--danger); margin-bottom: 8px; overflow: hidden; height: 65px; }
+#display-area { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
+#chart-container { width: 100%; max-width: 220px; max-height: 220px; margin: auto; }
+#list-container { width: 100%; display: none; flex-direction: column; gap: 8px; padding-bottom: 10px; }
+
+/* 下半部：輸入區 (佔滿剩餘空間，防止按鈕被裁切) */
+#input-section { flex: 1; padding: 20px; background: var(--white); border-radius: 28px 28px 0 0; box-shadow: 0 -4px 20px rgba(117,147,161,0.1); overflow-y: auto; display: flex; flex-direction: column; }
+.type-toggle-group { display: flex; gap: 10px; margin-bottom: 15px; flex-shrink: 0; }
+.type-btn { flex: 1; padding: 12px; border-radius: 16px; border: 1px solid var(--border-color); background: #f8fafa; cursor: pointer; font-weight: bold; color: #8fa3ad; transition: 0.3s; font-size: 14px; }
+.type-btn.active { background: var(--primary); color: var(--white); border-color: var(--primary); box-shadow: 0 4px 12px rgba(117,147,161,0.25); }
+#type-inc.active { background: var(--income-color); border-color: var(--income-color); box-shadow: 0 4px 12px rgba(141,174,153,0.25); }
+
+.section-title { font-size: 12px; color: #8fa3ad; margin-bottom: 10px; font-weight: bold; }
+.category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; flex-shrink: 0; }
+.cat-btn { padding: 12px 2px; border-radius: 14px; font-size: 12px; text-align: center; background: #f8fafa; border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; transition: 0.2s; font-weight: 500; }
+/* .cat-btn.selected 的顏色現在由 JS 控制！ */
+
+.input-group { display: flex; gap: 10px; margin-bottom: 15px; flex-shrink: 0; }
+.input-group input { flex: 1; width: 0; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--border-color); background: #f8fafa; font-size: 15px; color: var(--text-color); outline: none; transition: 0.3s; }
+.input-group input:focus { border-color: var(--primary); background: var(--white); }
+
+#add-btn { background: var(--primary); color: var(--white); border: none; padding: 16px; border-radius: 16px; font-weight: bold; font-size: 16px; width: 100%; flex-shrink: 0; box-shadow: 0 4px 12px rgba(117,147,161,0.25); transition: 0.2s; margin-bottom: 10px; }
+#add-btn:active { transform: scale(0.98); }
+
+/* 滑動刪除 (白色區域填滿) */
+.list-item-wrapper { position: relative; border-radius: 16px; background: var(--danger); margin-bottom: 6px; overflow: hidden; height: 65px; flex-shrink: 0;}
 .delete-btn { position: absolute; right: 0; top: 0; width: 80px; height: 100%; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 14px; z-index: 1; }
-.list-item { 
-  position: relative; z-index: 2; width: 100%; height: 100%; 
-  background: white; display: flex; align-items: center; padding: 0 15px;
-  transition: transform 0.3s ease;
-}
+.list-item { position: relative; z-index: 2; width: 100%; height: 100%; background: var(--white); border: 1px solid var(--border-color); border-radius: 16px; display: flex; align-items: center; padding: 0 16px; transition: transform 0.3s ease; }
 .list-item.swiped { transform: translateX(-80px); }
+.color-indicator { width: 12px; height: 12px; border-radius: 4px; margin-right: 12px; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.list-cat { font-weight: bold; font-size: 13px; margin-bottom: 2px;}
+.list-memo { font-size: 11px; color: #8fa3ad; }
+.list-amt { font-weight: bold; font-size: 15px; color: var(--text-color); }
 
-/* 顏色小方塊 */
-.color-indicator { 
-  width: 16px; 
-  height: 16px; 
-  border-radius: 4px; 
-  margin-right: 12px; 
-  flex-shrink: 0;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-}
-
-/* 其他樣式優化 */
-.category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
-.cat-btn { padding: 8px 2px; border-radius: 8px; font-size: 11px; text-align: center; background: #f0f4f5; border: 1px solid #d1d9db; }
-.cat-btn.selected { background: var(--primary); color: white; }
-#loading-screen { position: absolute; width: 100%; height: 100%; background: var(--primary); color: white; display: flex; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s; }
+#loading-screen { position: absolute; width: 100%; height: 100%; background: var(--bg-color); color: var(--primary); display: flex; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s; font-size: 20px; font-weight: bold;}

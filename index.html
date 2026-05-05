@@ -13,7 +13,7 @@
     <div class="header"><span>看看你花了多少!</span></div>
 
     <div id="main-container">
-        <!-- 上半部：統計區 -->
+        <!-- 上半部：統計區 (固定比例) -->
         <div id="stats-section">
             <div class="toggle-group main-toggle">
                 <button class="toggle-btn active" onclick="switchTab('chart')">圓餅圖</button>
@@ -25,11 +25,8 @@
             </div>
         </div>
 
-        <hr class="divider">
-
-        <!-- 下半部：輸入區 -->
+        <!-- 下半部：輸入區 (自動滾動，保證不超出畫面) -->
         <div id="input-section">
-            <!-- 新增：收支切換 -->
             <div class="type-toggle-group">
                 <button id="type-exp" class="type-btn active" onclick="setRecordType('expense')">支出</button>
                 <button id="type-inc" class="type-btn" onclick="setRecordType('income')">收入</button>
@@ -40,7 +37,7 @@
             
             <div class="input-group">
                 <input type="number" id="amount-input" placeholder="金額" inputmode="decimal">
-                <input type="text" id="memo-input" placeholder="備註">
+                <input type="text" id="memo-input" placeholder="備註 (選填)">
             </div>
             
             <button id="add-btn" onclick="addRecord()">確認紀錄</button>

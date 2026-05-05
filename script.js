@@ -1,16 +1,16 @@
 const EXP_CATS = ["貓咪用品", "賣場/Costco", "餐飲", "交通", "生活/帳單", "購物/治裝", "娛樂/聚餐", "醫療/健康", "理財/投資", "數位/軟體", "嗜好/裝備"];
 const INC_CATS = ["薪資", "獎金", "中獎", "投資收入", "其他收入"];
 
-// 定義分類顏色映射 (讓圓餅圖與清單同步)
+// 專屬莫蘭迪色票 (藍綠灰粉為主)
 const CAT_COLORS = {
-    "貓咪用品": "#ff9f43", "賣場/Costco": "#ee5253", "餐飲": "#10ac84", "交通": "#2e86de",
-    "生活/帳單": "#54a0ff", "購物/治裝": "#5f27cd", "娛樂/聚餐": "#ff9ff3", "醫療/健康": "#0abde3",
-    "理財/投資": "#ff6b6b", "數位/軟體": "#48dbfb", "嗜好/裝備": "#8395a7",
-    "薪資": "#1dd1a1", "獎金": "#feca57", "中獎": "#ff6b6b", "投資收入": "#48dbfb", "其他收入": "#c8d6e5"
+    "貓咪用品": "#d6a278", "賣場/Costco": "#c48888", "餐飲": "#8dae99", "交通": "#8b9ba3",
+    "生活/帳單": "#86a5b8", "購物/治裝": "#9b8dae", "娛樂/聚餐": "#d4a9b4", "醫療/健康": "#8bb0b3",
+    "理財/投資": "#bd8888", "數位/軟體": "#80a3a3", "嗜好/裝備": "#a1a6a1",
+    "薪資": "#8dae99", "獎金": "#d4b383", "中獎": "#c48888", "投資收入": "#86a5b8", "其他收入": "#b0b5b9"
 };
 
 let expenses = JSON.parse(localStorage.getItem('my_expenses')) || [];
-let currentType = 'expense'; // expense 或 income
+let currentType = 'expense';
 let selectedCategory = "";
 let pieChart = null;
 
@@ -23,7 +23,6 @@ window.onload = () => {
     }, 800);
 };
 
-// 切換支出/收入選單
 function setRecordType(type) {
     currentType = type;
     selectedCategory = "";
@@ -36,13 +35,30 @@ function renderCategoryGrid() {
     const grid = document.getElementById('category-grid');
     grid.innerHTML = "";
     const list = currentType === 'expense' ? EXP_CATS : INC_CATS;
+    
     list.forEach(cat => {
         const btn = document.createElement('div');
         btn.className = 'cat-btn';
         btn.innerText = cat;
+        
         btn.onclick = () => {
-            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+            // 先重置所有按鈕的樣式
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                b.classList.remove('selected');
+                b.style.backgroundColor = '#f8fafa';
+                b.style.color = 'var(--text-color)';
+                b.style.borderColor = 'var(--border-color)';
+                b.style.boxShadow = 'none';
+            });
+            
+            // 為點擊的按鈕染上對應的圓餅圖顏色！
             btn.classList.add('selected');
+            const targetColor = CAT_COLORS[cat] || 'var(--primary)';
+            btn.style.backgroundColor = targetColor;
+            btn.style.borderColor = targetColor;
+            btn.style.color = '#ffffff';
+            btn.style.boxShadow = `0 4px 10px ${targetColor}40`; // 加上淡淡的同色系陰影
+            
             selectedCategory = cat;
         };
         grid.appendChild(btn);
@@ -55,26 +71,22 @@ function addRecord() {
     if (!selectedCategory || !amt) return alert("大大，請選擇分類並輸入金額喔！");
 
     expenses.push({ 
-        id: Date.now(), 
-        type: currentType,
-        category: selectedCategory, 
-        amount: parseInt(amt), 
-        memo, 
-        date: new Date().toLocaleDateString() 
+        id: Date.now(), type: currentType, category: selectedCategory, amount: parseInt(amt), memo, date: new Date().toLocaleDateString() 
     });
     
     localStorage.setItem('my_expenses', JSON.stringify(expenses));
     document.getElementById('amount-input').value = "";
     document.getElementById('memo-input').value = "";
+    
+    // 記帳後清除分類選取狀態
+    selectedCategory = "";
+    renderCategoryGrid();
     updateStats(); 
 }
 
 function updateStats() {
-    // 1. 更新圖表 (區分顏色)
     const totals = {};
-    expenses.forEach(ex => {
-        totals[ex.category] = (totals[ex.category] || 0) + ex.amount;
-    });
+    expenses.forEach(ex => { totals[ex.category] = (totals[ex.category] || 0) + ex.amount; });
 
     const labels = Object.keys(totals).filter(k => totals[k] > 0);
     const data = labels.map(k => totals[k]);
@@ -84,11 +96,10 @@ function updateStats() {
     if (pieChart) pieChart.destroy();
     pieChart = new Chart(ctx, {
         type: 'doughnut',
-        data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 0 }] },
-        options: { cutout: '75%', plugins: { legend: { display: false } } }
+        data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 2, borderColor: '#f2f5f6' }] },
+        options: { cutout: '70%', plugins: { legend: { display: false } } }
     });
 
-    // 2. 更新清單 (加入顏色小方塊)
     const container = document.getElementById('list-container');
     container.innerHTML = "";
     [...expenses].reverse().forEach(ex => {
@@ -110,7 +121,7 @@ function updateStats() {
         item.className = 'list-item';
         const color = CAT_COLORS[ex.category] || "#ccc";
         const displayAmt = ex.type === 'income' ? `+${ex.amount}` : `$${ex.amount}`;
-        const amtClass = ex.type === 'income' ? 'style="color:#52b788"' : '';
+        const amtColor = ex.type === 'income' ? 'var(--income-color)' : 'var(--text-color)';
 
         item.innerHTML = `
             <div class="color-indicator" style="background:${color}"></div>
@@ -118,10 +129,9 @@ function updateStats() {
                 <div class="list-cat">${ex.category}</div>
                 <div class="list-memo">${ex.memo || ''} (${ex.date})</div>
             </div>
-            <div class="list-amt" ${amtClass}>${displayAmt}</div>
+            <div class="list-amt" style="color:${amtColor}">${displayAmt}</div>
         `;
         
-        // 滑動邏輯
         let startX = 0;
         item.ontouchstart = (e) => startX = e.touches[0].clientX;
         item.ontouchmove = (e) => {
@@ -143,8 +153,4 @@ function switchTab(tab) {
     event.target.classList.add('active');
     document.getElementById('chart-container').style.display = tab === 'chart' ? 'block' : 'none';
     document.getElementById('list-container').style.display = tab === 'list' ? 'flex' : 'none';
-}
-
-function switchScreen(id) {
-    // 為了維持同一頁，這個功能暫時保留但可不使用
 }
