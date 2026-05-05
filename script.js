@@ -1,3 +1,6 @@
+// 大大專屬的 API 網址
+const API_URL = "https://script.google.com/macros/s/AKfycbzutzBFrMpu7v4DFTpqZgG8rwaxYiYjrxwGeLghZdRGbKerZ4eZuDtbtv2WC6E_mf3iXg/exec";
+
 const EXP_CATS = ["貓咪用品", "賣場/Costco", "餐飲", "交通", "生活/帳單", "購物/治裝", "娛樂/聚餐", "醫療/健康", "理財/投資", "數位/軟體", "嗜好/裝備"];
 const INC_CATS = ["薪資", "獎金", "中獎", "投資收入", "其他收入"];
 
@@ -8,21 +11,47 @@ const CAT_COLORS = {
     "薪資": "#8dae99", "獎金": "#d4b383", "中獎": "#c48888", "投資收入": "#86a5b8", "其他收入": "#b0b5b9"
 };
 
-let expenses = JSON.parse(localStorage.getItem('my_expenses')) || [];
+let expenses = []; 
 let currentType = 'expense'; 
 let selectedCategory = "";
 let pieChart = null;
 
-window.onload = () => {
+// 當網頁載入時，從 Google 雲端抓取資料
+window.onload = async () => {
     renderCategoryGrid();
+    
+    try {
+        const response = await fetch(API_URL);
+        const data = await response.json();
+        if (data && data.length > 0) {
+            expenses = data;
+            localStorage.setItem('my_expenses', JSON.stringify(expenses));
+        } else {
+            expenses = JSON.parse(localStorage.getItem('my_expenses')) || [];
+        }
+    } catch (error) {
+        console.error("讀取雲端資料失敗，先使用本機暫存", error);
+        expenses = JSON.parse(localStorage.getItem('my_expenses')) || [];
+    }
+    
     updateStats();
+    
     setTimeout(() => {
         document.getElementById('loading-screen').style.opacity = '0';
         setTimeout(() => document.getElementById('loading-screen').style.display = 'none', 500);
     }, 800);
 };
 
-// 漢堡選單開關
+function cancelSwipe(e) {
+    if (!e.target.closest('.delete-btn') && !e.target.closest('.list-item-wrapper')) {
+        document.querySelectorAll('.list-item.swiped').forEach(item => {
+            item.classList.remove('swiped');
+        });
+    }
+}
+document.addEventListener('touchstart', cancelSwipe);
+document.addEventListener('mousedown', cancelSwipe);
+
 function toggleMenu(open) {
     const drawer = document.getElementById('nav-drawer');
     const overlay = document.getElementById('menu-overlay');
@@ -35,7 +64,6 @@ function toggleMenu(open) {
     }
 }
 
-// 處理選單點擊
 function handleNav(view) {
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.toggle('active', item.innerText.includes(view === 'daily' ? '日' : '月'));
@@ -45,17 +73,16 @@ function handleNav(view) {
     document.getElementById('monthly-view').style.display = view === 'monthly' ? 'block' : 'none';
     
     if (view === 'monthly') renderMonthlyView();
-    toggleMenu(false); // 點擊後自動關閉選單
+    toggleMenu(false); 
 }
 
-// 修改：輸入類型切換時，統計類型同步跟進
 function setRecordType(type) {
     currentType = type;
     selectedCategory = "";
     document.getElementById('type-exp').classList.toggle('active', type === 'expense');
     document.getElementById('type-inc').classList.toggle('active', type === 'income');
     renderCategoryGrid();
-    updateStats(); // 同步更新上方的統計圖表
+    updateStats(); 
 }
 
 function renderCategoryGrid() {
@@ -89,25 +116,44 @@ function renderCategoryGrid() {
     });
 }
 
-function addRecord() {
+// 🌟 修改點 1：傳送給雲端時，包裝成 action: 'add'
+async function addRecord() {
     const amt = document.getElementById('amount-input').value;
     const memo = document.getElementById('memo-input').value;
     if (!selectedCategory || !amt) return alert("大大，請選擇分類並輸入金額喔！");
 
-    expenses.push({ 
-        id: Date.now(), type: currentType, category: selectedCategory, amount: parseInt(amt), memo, date: new Date().toLocaleDateString() 
-    });
-    
+    const newRecord = { 
+        id: Date.now(), 
+        type: currentType, 
+        category: selectedCategory, 
+        amount: parseInt(amt), 
+        memo: memo, 
+        date: new Date().toLocaleDateString() 
+    };
+
+    expenses.push(newRecord);
     localStorage.setItem('my_expenses', JSON.stringify(expenses));
+    
     document.getElementById('amount-input').value = "";
     document.getElementById('memo-input').value = "";
     selectedCategory = "";
     renderCategoryGrid();
     updateStats(); 
+
+    try {
+        await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            // 加上 action: 'add' 讓試算表知道這是新增
+            body: JSON.stringify({ action: "add", data: newRecord }) 
+        });
+        console.log("成功同步新增到雲端！");
+    } catch (error) {
+        console.error("雲端同步失敗", error);
+    }
 }
 
 function updateStats() {
-    // 統計類型現在直接跟隨 currentType
     const filteredExpenses = expenses.filter(e => e.type === currentType);
     const totals = {};
     let grandTotal = 0;
@@ -143,11 +189,28 @@ function updateStats() {
         const delBtn = document.createElement('div');
         delBtn.className = 'delete-btn';
         delBtn.innerText = "刪除";
-        delBtn.onclick = () => {
+        
+        // 🌟 修改點 2：刪除時，同步發送 action: 'delete' 給雲端
+        delBtn.onclick = async () => {
             if(confirm("確定要刪除嗎？")) {
-                expenses = expenses.filter(e => e.id !== ex.id);
+                const targetId = ex.id;
+                
+                // 1. 先刪除網頁本機畫面
+                expenses = expenses.filter(e => e.id !== targetId);
                 localStorage.setItem('my_expenses', JSON.stringify(expenses));
                 updateStats();
+                
+                // 2. 告訴雲端砍掉這筆資料
+                try {
+                    await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: "delete", id: targetId })
+                    });
+                    console.log(`已同步刪除雲端紀錄 ID: ${targetId}`);
+                } catch(error) {
+                    console.error("雲端刪除失敗", error);
+                }
             }
         };
 
