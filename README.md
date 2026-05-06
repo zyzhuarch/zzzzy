@@ -1,2 +1,2 @@
 # zzzzy
-連結https://zyzhuarch.github.io/zzzzy/
+>記帳小程式
