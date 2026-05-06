@@ -74,7 +74,7 @@ body { background-color: var(--bg-color); color: var(--text-color); height: 100d
 #loading-screen { position: absolute; width: 100%; height: 100%; background: var(--bg-color); color: var(--primary); display: flex; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s; font-size: 20px; font-weight: bold;}
 
 /* 🌟 月紀錄：升級版月曆風格 (更緊湊、顏色更深) */
-#monthly-view { display: none; flex: 1; overflow-y: auto; padding: 15px 10px; background: var(--bg-color); }
+#monthly-view { display: none; flex: 1; overflow-y: auto; padding: 8px 6px; background: var(--bg-color); }
 
 .calendar-year-title { font-size: 22px; font-weight: 900; color: #a1b2bb; margin: 5px 0 10px 10px; letter-spacing: 1px;}
 
