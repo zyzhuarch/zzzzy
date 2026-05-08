@@ -1,13 +1,14 @@
 // 大大專屬的 API 網址
 const API_URL = "https://script.google.com/macros/s/AKfycbxN6DwZjFyuig1l3jHXuHzif8kbf751D8czPpD0BxMiXFoVrnoh1TDYSBkhHB7jj0a14g/exec";
 
-const EXP_CATS = ["貓咪用品", "賣場/Costco", "餐飲", "交通", "生活/帳單", "購物/治裝", "娛樂/聚餐", "醫療/健康", "理財/投資", "數位/軟體", "嗜好/裝備"];
+// 🌟 從支出清單中移除了「理財/投資」
+const EXP_CATS = ["貓咪用品", "賣場/Costco", "餐飲", "交通", "生活/帳單", "購物/治裝", "娛樂/聚餐", "醫療/健康", "數位/軟體", "嗜好/裝備"];
 const INC_CATS = ["薪資", "獎金", "中獎", "投資收入", "其他收入"];
 
 const CAT_COLORS = {
     "貓咪用品": "#d6a278", "賣場/Costco": "#c48888", "餐飲": "#8dae99", "交通": "#8b9ba3",
     "生活/帳單": "#86a5b8", "購物/治裝": "#9b8dae", "娛樂/聚餐": "#d4a9b4", "醫療/健康": "#8bb0b3",
-    "理財/投資": "#bd8888", "數位/軟體": "#80a3a3", "嗜好/裝備": "#a1a6a1",
+    "理財/投資": "#bd8888", "數位/軟體": "#80a3a3", "嗜好/裝備": "#a1a6a1", // 這裡保留顏色，讓歷史紀錄維持美美的！
     "薪資": "#8dae99", "獎金": "#d4b383", "中獎": "#c48888", "投資收入": "#86a5b8", "其他收入": "#b0b5b9"
 };
 
@@ -246,7 +247,6 @@ function switchTab(tab, btnElement) {
     document.getElementById('list-container-wrapper').style.display = tab === 'list' ? 'flex' : 'none';
 }
 
-// 🌟 升級版魔法：月曆生成 (加入收支餘額統整、星期日為首)
 function renderMonthlyCalendar() {
     const container = document.getElementById('monthly-content');
     container.innerHTML = '';
@@ -264,7 +264,6 @@ function renderMonthlyCalendar() {
         }
 
         if(!dataTree[y]) dataTree[y] = {};
-        // 🌟 新增 totalInc 收入加總
         if(!dataTree[y][m]) dataTree[y][m] = { totalExp: 0, totalInc: 0, days: {} };
         if(!dataTree[y][m].days[day]) dataTree[y][m].days[day] = { totalExp: 0, records: [] };
         
@@ -275,7 +274,6 @@ function renderMonthlyCalendar() {
             dataTree[y][m].days[day].totalExp += ex.amount;
         } else if (ex.type === 'income') {
             dataTree[y][m].totalInc += ex.amount;
-            // 收入不計入 days[day].totalExp，因此月曆格子上不會顯示
         }
     });
 
@@ -301,7 +299,6 @@ function renderMonthlyCalendar() {
             
             const balance = mData.totalInc - mData.totalExp;
             
-            // 🌟 儀表板：左邊月份，右邊 收入/支出/餘額
             mHeader.innerHTML = `
                 <div class="month-name">${parseInt(m)}月</div>
                 <div class="month-stats">
@@ -314,7 +311,6 @@ function renderMonthlyCalendar() {
 
             const weekHeader = document.createElement('div');
             weekHeader.className = 'calendar-grid week-header';
-            // 🌟 改成星期日為一週之首
             ['日','一','二','三','四','五','六'].forEach(w => {
                 const wSpan = document.createElement('span');
                 wSpan.innerText = w;
@@ -325,11 +321,9 @@ function renderMonthlyCalendar() {
             const daysGrid = document.createElement('div');
             daysGrid.className = 'calendar-grid days-grid';
 
-            // 取得該月第一天是星期幾 (0 是週日，6 是週六)
             const firstDayObj = new Date(y, parseInt(m)-1, 1);
             const firstDayIndex = firstDayObj.getDay(); 
             
-            // 補齊前面的空白格子
             for(let i = 0; i < firstDayIndex; i++) {
                 const emptyCell = document.createElement('div');
                 emptyCell.className = 'calendar-day empty';
@@ -348,7 +342,6 @@ function renderMonthlyCalendar() {
                 if(dData) {
                     cell.classList.add('has-record');
                     
-                    // 🌟 只有當天有花費時，才顯示紅色的數字，且拿掉 -$ 符號
                     let amtHtml = '';
                     if (dData.totalExp > 0) {
                         amtHtml = `<div class="date-amt">${dData.totalExp}</div>`;
