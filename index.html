@@ -14,7 +14,23 @@
     <link rel="stylesheet" href="style.css">    
 </head>
 <body>
-    <div id="loading-screen"><div class="loader">♞ YONGZHU ♞</div></div>
+    <div id="loading-screen">
+        <div class="loader" id="loader-text">♞ YONGZHU ♞</div>
+    </div>
+    
+    <script>
+        const loaderText = document.getElementById('loader-text');
+        const text = loaderText.innerText;
+        loaderText.innerHTML = '';
+        text.split('').forEach((char, i) => {
+            const span = document.createElement('span');
+            // 如果遇到空白字元，要轉換成 HTML 的不斷行空白，不然排版會壞掉
+            span.innerText = char === ' ' ? '\u00A0' : char; 
+            // 每個字元依序延遲 0.08 秒起跳，創造波浪效果
+            span.style.animationDelay = `${i * 0.08}s`; 
+            loaderText.appendChild(span);
+        });
+    </script>
 
     <div class="header">
         <div class="header-spacer"></div> <span>看看你花了多少!</span>
