@@ -1,7 +1,5 @@
-// 大大專屬的 API 網址
+// 專屬網址
 const API_URL = "https://script.google.com/macros/s/AKfycbxN6DwZjFyuig1l3jHXuHzif8kbf751D8czPpD0BxMiXFoVrnoh1TDYSBkhHB7jj0a14g/exec";
-
-// 🌟 從支出清單中移除了「理財/投資」
 const EXP_CATS = ["貓咪用品", "賣場/Costco", "餐飲", "交通", "生活/帳單", "購物/治裝", "娛樂/聚餐", "醫療/健康", "數位/軟體", "嗜好/裝備"];
 const INC_CATS = ["薪資", "獎金", "中獎", "投資收入", "其他收入"];
 
@@ -162,7 +160,7 @@ async function addRecord() {
     }
 }
 
-// 🌟 核心修改：只顯示當月資料
+// 只顯示當月資料
 function updateStats() {
     // 取得當前的年月，例如 "2026-05" 或 "2026-06"
     const today = new Date();
@@ -170,7 +168,7 @@ function updateStats() {
     const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
     const currentMonthPrefix = `${currentYear}-${currentMonth}`;
 
-    // 過濾資料：判斷收支類型，同時判斷日期是否為「當月」
+    // 過濾資料：判斷收支類型，是否為「當月」
     const filteredExpenses = expenses.filter(e => {
         if (e.type !== currentType) return false;
         
@@ -210,7 +208,7 @@ function updateStats() {
         options: { cutout: '75%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { let label = context.label || ''; let value = context.raw || 0; let percentage = grandTotal > 0 ? Math.round((value / grandTotal) * 100) + '%' : '0%'; return label ? label + ': ' + percentage : percentage; } } } } }
     });
 
-    // 🌟 將提示文字改為當月
+
     const typeLabel = currentType === 'expense' ? '當月支出' : '當月收入';
     const totalText = `<span style="font-size:12px; color:#8fa3ad; margin-bottom:2px;">${typeLabel}</span><span style="font-size:22px; font-weight:bold; color:var(--text-color);">$${grandTotal}</span>`;
     document.getElementById('chart-center-text').innerHTML = totalText;
