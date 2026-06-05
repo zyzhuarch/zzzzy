@@ -8,7 +8,7 @@ const INC_CATS = ["薪資", "獎金", "中獎", "投資收入", "其他收入"];
 const CAT_COLORS = {
     "貓咪用品": "#d6a278", "賣場/Costco": "#c48888", "餐飲": "#8dae99", "交通": "#8b9ba3",
     "生活/帳單": "#86a5b8", "購物/治裝": "#9b8dae", "娛樂/聚餐": "#d4a9b4", "醫療/健康": "#8bb0b3",
-    "理財/投資": "#bd8888", "數位/軟體": "#80a3a3", "嗜好/裝備": "#a1a6a1", 
+    "理財/投資": "#bd8888", "數位/軟體": "#80a3a3", "嗜好/裝備": "#a1a6a1", // 這裡保留顏色，讓歷史紀錄維持美美的！
     "薪資": "#8dae99", "獎金": "#d4b383", "中獎": "#c48888", "投資收入": "#86a5b8", "其他收入": "#b0b5b9"
 };
 
@@ -26,15 +26,6 @@ function getLocalToday() {
     return `${yyyy}-${mm}-${dd}`;
 }
 
-// 🌟 時光濾水器：不管拿到多髒的時間字串，都強制洗成 YYYY-MM-DD
-function formatCleanDate(dateStr) {
-    if (!dateStr) return '';
-    let clean = String(dateStr);
-    if (clean.startsWith("'")) clean = clean.substring(1);
-    if (clean.includes('T')) clean = clean.split('T')[0];
-    return clean.replace(/\//g, '-');
-}
-
 window.onload = async () => {
     renderCategoryGrid();
     document.getElementById('date-input').value = getLocalToday();
@@ -44,7 +35,13 @@ window.onload = async () => {
         const data = await response.json();
         if (data && data.length > 0) {
             expenses = data.map(record => {
-                record.date = formatCleanDate(record.date);
+                if (typeof record.date === 'string' && record.date.startsWith("'")) {
+                    record.date = record.date.substring(1);
+                }
+                if (record.date && record.date.includes('T')) {
+                    record.date = record.date.split('T')[0];
+                }
+                record.date = record.date.replace(/\//g, '-');
                 return record;
             });
             localStorage.setItem('my_expenses', JSON.stringify(expenses));
@@ -55,12 +52,6 @@ window.onload = async () => {
         console.error("讀取雲端資料失敗", error);
         expenses = JSON.parse(localStorage.getItem('my_expenses')) || [];
     }
-    
-    // 把本機可能髒掉的舊資料也洗乾淨
-    expenses = expenses.map(e => {
-        e.date = formatCleanDate(e.date);
-        return e;
-    });
     
     updateStats();
     setTimeout(() => {
@@ -171,19 +162,28 @@ async function addRecord() {
     }
 }
 
+// 🌟 核心修改：只顯示當月資料
 function updateStats() {
+    // 取得當前的年月，例如 "2026-05" 或 "2026-06"
     const today = new Date();
     const currentYear = today.getFullYear();
     const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
     const currentMonthPrefix = `${currentYear}-${currentMonth}`;
 
+    // 過濾資料：判斷收支類型，同時判斷日期是否為「當月」
     const filteredExpenses = expenses.filter(e => {
         if (e.type !== currentType) return false;
         
-        let cleanDate = formatCleanDate(e.date);
+        let cleanDate = e.date || '';
+        if (typeof cleanDate === 'string' && cleanDate.startsWith("'")) {
+            cleanDate = cleanDate.substring(1);
+        }
+        
         if (cleanDate && cleanDate.includes('-')) {
+            // 如果日期字串開頭是 "YYYY-MM"，代表是當月紀錄
             return cleanDate.startsWith(currentMonthPrefix); 
         } else {
+            // 如果是很舊的紀錄(沒有date欄位)，用 id 時間戳判斷
             const d = new Date(e.id);
             return d.getFullYear() === currentYear && d.getMonth() === today.getMonth();
         }
@@ -210,6 +210,7 @@ function updateStats() {
         options: { cutout: '75%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { let label = context.label || ''; let value = context.raw || 0; let percentage = grandTotal > 0 ? Math.round((value / grandTotal) * 100) + '%' : '0%'; return label ? label + ': ' + percentage : percentage; } } } } }
     });
 
+    // 🌟 將提示文字改為當月
     const typeLabel = currentType === 'expense' ? '當月支出' : '當月收入';
     const totalText = `<span style="font-size:12px; color:#8fa3ad; margin-bottom:2px;">${typeLabel}</span><span style="font-size:22px; font-weight:bold; color:var(--text-color);">$${grandTotal}</span>`;
     document.getElementById('chart-center-text').innerHTML = totalText;
@@ -242,7 +243,7 @@ function updateStats() {
         const color = CAT_COLORS[ex.category] || "#ccc";
         const displayAmt = ex.type === 'income' ? `+${ex.amount}` : `$${ex.amount}`;
         const amtColor = ex.type === 'income' ? 'var(--income-color)' : 'var(--text-color)';
-        const displayDate = formatCleanDate(ex.date);
+        const displayDate = ex.date || '';
 
         item.innerHTML = `
             <div class="color-indicator" style="background:${color}"></div>
@@ -279,11 +280,9 @@ function renderMonthlyCalendar() {
     const dataTree = {};
     
     expenses.forEach(ex => {
-        let cleanDate = formatCleanDate(ex.date);
-        
         let y, m, day;
-        if (cleanDate && cleanDate.includes('-')) {
-            const parts = cleanDate.split('-');
+        if (ex.date && ex.date.includes('-')) {
+            const parts = ex.date.split('-');
             y = parts[0]; m = parts[1]; day = parts[2];
         } else {
             const d = new Date(ex.id);
